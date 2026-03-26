@@ -26,7 +26,7 @@ function mapProducts(candidates: Record<string, unknown>[]): Product[] {
     return true
   })
 
-  return deduplicated.slice(0, 24).map((item, i) => {
+  return deduplicated.slice(0, 48).map((item, i) => {
     const data = item.data as Record<string, unknown> | undefined
     const rawUrl = data?.url != null ? String(data.url)
       : item.url != null ? String(item.url)
@@ -94,7 +94,7 @@ export async function fetchCollections(keywords: string[]): Promise<Collection[]
 export async function browseCollection(collectionId: string): Promise<Product[]> {
   const url =
     `https://ac.cnstrc.com/browse/collection_id/${encodeURIComponent(collectionId)}` +
-    `?key=key_GZTqlLr41FS2p7AY&c=ciojs-client-2.71.1&num_results_per_page=24`
+    `?key=key_GZTqlLr41FS2p7AY&c=ciojs-client-2.71.1&num_results_per_page=48`
   console.log(`\n[Collection] Browsing "${collectionId}"`)
   const res = await fetch(url, { headers: { Accept: 'application/json' } })
   if (!res.ok) {
@@ -111,7 +111,7 @@ export async function browseCollection(collectionId: string): Promise<Product[]>
 export async function searchKmart(query: string, categoryFilter = ''): Promise<Product[]> {
   const url =
     `https://ac.cnstrc.com/search/${encodeURIComponent(query)}` +
-    `?key=key_GZTqlLr41FS2p7AY&c=ciojs-client-2.71.1&num_results_per_page=24` +
+    `?key=key_GZTqlLr41FS2p7AY&c=ciojs-client-2.71.1&num_results_per_page=48` +
     categoryFilter
   console.log(`\n[Search] ${query}`)
   const res = await fetch(url, { headers: { Accept: 'application/json' } })

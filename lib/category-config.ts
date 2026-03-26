@@ -28,7 +28,7 @@ export interface CategoryConfig {
 
 // ─── Shared collection prompt fragment ──────────────────────────────────────
 
-const COLLECTION_PROMPT_SUFFIX = `Each product in search results has an "id", "name", "price", "dataId", and "colour" field. When calling present_collections, reference products by their id only — do not repeat name, price, or URLs. Group ALL products into 2–4 themed collections. Each collection should have 6–20 products. Every product should appear in exactly one collection. Give each collection a short evocative name (e.g. "Resort Ready", "Off-Duty Cool", "Weekend Edit"). Use the colour field to build cohesive collections — prefer combinations where colours complement each other. You MUST call present_collections even if some searches returned no results. Do not use emojis in collection names.`
+const COLLECTION_PROMPT_SUFFIX = `Each product in search results has an "id", "name", "price", "dataId", and "colour" field. When calling present_collections, reference products by their id only — do not repeat name, price, or URLs. Group ALL products into 2–4 themed collections. Each collection should have 20–50 products. Every product should appear in exactly one collection. Give each collection a short evocative name (e.g. "Resort Ready", "Off-Duty Cool", "Weekend Edit"). Use the colour field to build cohesive collections — prefer combinations where colours complement each other. You MUST call present_collections even if some searches returned no results. Do not use emojis in collection names.`
 
 // ─── Outfits ─────────────────────────────────────────────────────────────────
 
