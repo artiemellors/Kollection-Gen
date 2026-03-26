@@ -389,7 +389,7 @@ export function ProductCollections({ collections }: { collections: ProductCollec
       {/* Product grid */}
       <div
         id="ProductCollections-grid"
-        className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 ${useKosmos ? 'gap-x-3 gap-y-6' : 'gap-3'}`}
+        className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 ${useKosmos ? 'gap-x-4 gap-y-6' : 'gap-x-4 gap-y-3'}`}
       >
         {isLoading ? (
           Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
