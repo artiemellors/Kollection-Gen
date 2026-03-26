@@ -28,7 +28,11 @@ export interface CategoryConfig {
 
 // ─── Shared collection prompt fragment ──────────────────────────────────────
 
-const COLLECTION_PROMPT_SUFFIX = `Each product in search results has an "id", "name", "price", "dataId", and "colour" field. When calling present_collections, reference products by their id only — do not repeat name, price, or URLs. Group ALL products into 2–4 themed collections. Each collection should have 20–50 products. Every product should appear in exactly one collection. Give each collection a short evocative name (e.g. "Resort Ready", "Off-Duty Cool", "Weekend Edit"). Use the colour field to build cohesive collections — prefer combinations where colours complement each other. You MUST call present_collections even if some searches returned no results. Do not use emojis in collection names.`
+const COLLECTION_PROMPT_SUFFIX = `Each product in search results has an "id", "name", "price", "dataId", and "colour" field. When calling present_collections, reference products by their id only — do not repeat name, price, or URLs. Group ALL products into 2–4 themed collections. Each collection should have 20–50 products. Every product should appear in exactly one collection. Give each collection a short evocative name (e.g. "Resort Ready", "Off-Duty Cool", "Weekend Edit"). Use the colour field to build cohesive collections — prefer combinations where colours complement each other.
+
+IMPORTANT — product ordering within each collection: Order products using a colour story with styling adjacency. Flow products from light tones to dark (or warm to cool), and within each colour group place items that would naturally be used, worn, or displayed together. For example: a cream top next to the trousers and shoes that pair with it, then transition to the next tone; or a white dinnerware set next to matching serveware, then complementary utensils. The goal is a grid that feels like a curated visual story — cohesive in colour and logical in how items relate to each other.
+
+You MUST call present_collections even if some searches returned no results. Do not use emojis in collection names.`
 
 // ─── Outfits ─────────────────────────────────────────────────────────────────
 
