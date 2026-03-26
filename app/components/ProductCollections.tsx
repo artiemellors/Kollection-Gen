@@ -303,15 +303,37 @@ export function ProductCollections({ collections }: { collections: ProductCollec
     <div className="w-full bg-white border-t border-black/[0.06]">
     <div id="ProductCollections" className="max-w-4xl mx-auto px-4 sm:px-8 pb-16">
 
-      {/* Section heading */}
-      {useKosmos ? (
-        <p className="text-2xl font-bold text-[#1a1a1a] mt-8 mb-5">Collections</p>
-      ) : (
-        <p className="text-xs font-bold tracking-[0.2em] uppercase text-[--text-muted] mt-8 mb-5">Collections</p>
-      )}
+      {/* Section heading with actions */}
+      <div className="flex items-baseline mt-8 mb-5">
+        {useKosmos ? (
+          <p className="text-2xl font-bold text-[#1a1a1a]">Collections</p>
+        ) : (
+          <p className="text-xs font-bold tracking-[0.2em] uppercase text-[--text-muted]">Collections</p>
+        )}
+        {!isLoading && activeCollection && (
+          <div className="ml-auto flex items-center gap-4">
+            <button
+              onClick={selectedCount === activeCollection.products.length ? deselectAll : selectAll}
+              className="text-[11px] font-semibold tracking-[0.12em] uppercase
+                         transition-all text-[rgba(26,26,26,0.4)] hover:text-[rgba(26,26,26,0.7)]"
+            >
+              {selectedCount === activeCollection.products.length ? 'Deselect All' : 'Select All'}
+            </button>
+            <button
+              onClick={handleExportAll}
+              className="text-[11px] font-semibold tracking-[0.12em] uppercase
+                         transition-all flex items-center gap-1.5
+                         text-[rgba(26,26,26,0.4)] hover:text-[rgba(26,26,26,0.7)]"
+            >
+              <i className="fa-solid fa-file-arrow-down text-[10px]" />
+              Export All
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Collection tab bar */}
-      <div id="ProductCollections-tabbar" className="sticky top-20 z-10 bg-white -mx-4 sm:-mx-8 px-4 sm:px-8 pt-4 mb-4">
+      <div id="ProductCollections-tabbar" className="sticky top-20 z-10 bg-white -mx-4 sm:-mx-8 px-4 sm:px-8 pt-4 mb-6">
         <div className="flex gap-0 overflow-x-auto scrollbar-hide border-b border-black/[0.08]">
           {isLoading ? (
             <>
@@ -338,53 +360,6 @@ export function ProductCollections({ collections }: { collections: ProductCollec
           )}
         </div>
       </div>
-
-      {/* Export toolbar */}
-      {!isLoading && activeCollection && (
-        <div
-          className="flex flex-wrap items-center gap-4 mb-6"
-          style={{ animation: 'fadeUp 200ms ease both' }}
-        >
-          <span className="text-[11px] text-[rgba(26,26,26,0.35)] mr-auto">
-            {selectedCount > 0
-              ? `${selectedCount} of ${activeCollection.products.length} selected`
-              : `${activeCollection.products.length} products`}
-          </span>
-
-          {/* Select / Deselect all */}
-          <button
-            onClick={selectedCount === activeCollection.products.length ? deselectAll : selectAll}
-            className="text-[11px] font-semibold tracking-[0.12em] uppercase
-                       transition-all text-[rgba(26,26,26,0.4)] hover:text-[rgba(26,26,26,0.7)]"
-          >
-            {selectedCount === activeCollection.products.length ? 'Deselect All' : 'Select All'}
-          </button>
-
-          {/* Export Selected */}
-          {selectedCount > 0 && (
-            <button
-              onClick={handleExportSelected}
-              className="text-[11px] font-semibold tracking-[0.12em] uppercase
-                         transition-all flex items-center gap-1.5 hover:opacity-70"
-              style={{ color: 'var(--accent)' }}
-            >
-              <i className="fa-solid fa-file-arrow-down text-[10px]" />
-              Export Selected
-            </button>
-          )}
-
-          {/* Export All */}
-          <button
-            onClick={handleExportAll}
-            className="text-[11px] font-semibold tracking-[0.12em] uppercase
-                       transition-all flex items-center gap-1.5
-                       text-[rgba(26,26,26,0.4)] hover:text-[rgba(26,26,26,0.7)]"
-          >
-            <i className="fa-solid fa-file-arrow-down text-[10px]" />
-            Export All
-          </button>
-        </div>
-      )}
 
       {/* Product grid */}
       <div
@@ -414,6 +389,36 @@ export function ProductCollections({ collections }: { collections: ProductCollec
             )
           ))
         ) : null}
+      </div>
+    </div>
+
+    {/* Floating selection bar */}
+    <div
+      className="fixed bottom-0 left-0 right-0 z-30 transition-transform duration-300 ease-out pointer-events-none"
+      style={{ transform: selectedCount > 0 ? 'translateY(0)' : 'translateY(100%)' }}
+    >
+      <div className="max-w-4xl mx-auto px-4 sm:px-8 pointer-events-auto">
+        <div className="flex items-center gap-4 py-3 px-5 mb-4 bg-white rounded-lg shadow-lg border border-black/[0.08]">
+          <span className="text-[12px] text-[rgba(26,26,26,0.5)] mr-auto">
+            {selectedCount} selected
+          </span>
+          <button
+            onClick={handleExportSelected}
+            className="text-[11px] font-semibold tracking-[0.12em] uppercase
+                       transition-all flex items-center gap-1.5 hover:opacity-70"
+            style={{ color: 'var(--accent)' }}
+          >
+            <i className="fa-solid fa-file-arrow-down text-[10px]" />
+            Export Selected
+          </button>
+          <button
+            onClick={deselectAll}
+            className="text-[11px] font-semibold tracking-[0.12em] uppercase
+                       transition-all text-[rgba(26,26,26,0.4)] hover:text-[rgba(26,26,26,0.7)]"
+          >
+            Clear
+          </button>
+        </div>
       </div>
     </div>
     </div>
