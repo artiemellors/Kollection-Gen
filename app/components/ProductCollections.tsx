@@ -77,7 +77,7 @@ function KmartProductCard({
   return (
     <div
       className={`flex flex-col relative group cursor-pointer transition-all duration-150 rounded-[8px] ${
-        isSelected ? 'ring-2 ring-[var(--accent)] bg-[rgba(23,104,176,0.03)]' : ''
+        isSelected ? 'ring-2 ring-[var(--accent)] ring-offset-[6px] bg-[rgba(23,104,176,0.03)]' : ''
       }`}
       style={{ animation: `fadeUp 300ms ${animDelay}ms ease both` }}
       onClick={onToggleSelect}
@@ -168,7 +168,7 @@ function OriginalProductCard({
     <div
       onClick={onToggleSelect}
       className={`bg-white rounded-lg overflow-hidden flex flex-col transition-all duration-150 cursor-pointer ${
-        isSelected ? 'ring-2 ring-[var(--accent)]' : ''
+        isSelected ? 'ring-2 ring-[var(--accent)] ring-offset-[6px]' : ''
       }`}
       style={{ animation: `fadeUp 300ms ${animDelay}ms ease both` }}
     >
