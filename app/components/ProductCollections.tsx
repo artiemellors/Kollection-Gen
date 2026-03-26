@@ -132,8 +132,7 @@ function KmartProductCard({
         {p.dataId && (
           <p className="text-[11px] font-mono text-[rgba(26,26,26,0.4)] mb-2">ID: {p.dataId}</p>
         )}
-        <div className="flex items-center justify-between">
-          <p className="font-bold text-[#1a1a1a] leading-none text-[24px]">
+        <p className="font-bold text-[#1a1a1a] leading-none text-[24px]">
             <span className="text-[16px] font-bold align-top" style={{ marginTop: '3px', display: 'inline-block' }}>$</span>
             {p.price.startsWith('$') ? p.price.slice(1) : p.price}
           </p>
@@ -142,14 +141,13 @@ function KmartProductCard({
               href={p.productUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-semibold transition-colors hover:underline"
+              className="mt-3 text-[11px] font-semibold transition-colors hover:underline"
               style={{ color: 'var(--accent)' }}
               onClick={e => e.stopPropagation()}
             >
               View ↗
             </a>
           )}
-        </div>
       </div>
     </div>
   )
