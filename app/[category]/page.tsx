@@ -1,7 +1,6 @@
 'use client'
 
 import { use, useState, useEffect, useRef } from 'react'
-import OutfitResults, { type Outfit } from '../components/OutfitResults'
 import { ProductCollections, type ProductCollection } from '../components/ProductCollections'
 import RefinementChips from '../components/RefinementChips'
 import Image from 'next/image'
@@ -116,7 +115,7 @@ function LoadingState({ statuses, phaseCopy }: { statuses: string[]; phaseCopy: 
   const subLabel = {
     thinking:  'One moment…',
     searching: `Across ${searchCount} categor${searchCount === 1 ? 'y' : 'ies'}`,
-    curating:  'Selecting the best combinations',
+    curating:  'Grouping products into collections',
   }[phase]
 
   return (
@@ -138,47 +137,18 @@ function LoadingState({ statuses, phaseCopy }: { statuses: string[]; phaseCopy: 
         />
       </div>
 
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-[300px_1fr]">
-        <div className="bg-white border border-black/[0.08] rounded p-7">
-          <div className="skeleton h-2 w-16 rounded mb-3" />
-          <div className="w-10 h-0.5 bg-[#e0e0e0] mb-7" />
-          <div className="skeleton h-6 w-3/4 rounded mb-2" />
-          <div className="skeleton h-6 w-1/2 rounded mb-7" />
-          <div className="space-y-2 mb-8">
-            <div className="skeleton h-2.5 w-full rounded" />
-            <div className="skeleton h-2.5 w-full rounded" />
-            <div className="skeleton h-2.5 w-2/3 rounded" />
-          </div>
-          <div className="pt-5 border-t border-black/[0.08] flex items-end justify-between">
-            <div>
-              <div className="skeleton h-2 w-20 rounded mb-2" />
-              <div className="skeleton h-9 w-20 rounded" />
+      {/* Skeleton grid matching collections layout */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex flex-col">
+            <div className="skeleton aspect-[4/5] w-full rounded-[8px] bg-[#F4F5F6]" />
+            <div className="pt-2 space-y-1.5">
+              <div className="skeleton h-3 w-full rounded" />
+              <div className="skeleton h-3 w-2/3 rounded" />
+              <div className="skeleton h-4 w-1/3 rounded mt-1" />
             </div>
-            <div className="skeleton h-3 w-10 rounded" />
           </div>
-          <div className="skeleton h-11 w-full rounded mt-6" />
-        </div>
-
-        <div className="flex flex-col gap-0.5">
-          {[0, 1, 2].map(i => (
-            <div key={i} className="bg-white border border-black/[0.08] p-5 sm:p-6">
-              <div className="flex gap-4 sm:gap-6">
-                <div className="skeleton w-24 h-[120px] sm:w-[120px] sm:h-[150px] shrink-0 rounded" />
-                <div className="flex-1 pt-1 space-y-2.5">
-                  <div className="skeleton h-2 w-12 rounded" />
-                  <div className="skeleton h-5 w-3/4 rounded" />
-                  <div className="skeleton h-2.5 w-full rounded" />
-                  <div className="skeleton h-2.5 w-2/3 rounded" />
-                  <div className="flex gap-2 pt-2">
-                    <div className="skeleton h-7 w-7 rounded-full" />
-                    <div className="skeleton h-7 w-9 rounded" />
-                    <div className="skeleton h-7 w-7 rounded-full" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
     </div>
   )
@@ -200,7 +170,6 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
 
   const [query, setQuery]         = useState('')
   const [statuses, setStatuses]   = useState<string[]>([])
-  const [result, setResult]       = useState<Outfit[] | null>(null)
   const [collections, setCollections] = useState<ProductCollection[] | null>(null)
   const [refinements, setRefinements] = useState<string[] | null>(null)
   const [loading, setLoading]     = useState(false)
@@ -234,7 +203,6 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
     setQuery(q)
     setLoading(true)
     setStatuses([])
-    setResult(null)
     setCollections(null)
     setRefinements(null)
     setError(null)
@@ -259,9 +227,9 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
         if (!line.startsWith('data: ')) continue
         const event = JSON.parse(line.slice(6)) as { type: string; message?: string; result?: unknown }
         if (event.type === 'status')           setStatuses(s => [...s, event.message!])
-        else if (event.type === 'done')        { setResult(event.result as Outfit[]); setLoading(false) }
         else if (event.type === 'collections') setCollections(event.result as ProductCollection[])
         else if (event.type === 'refinements') setRefinements(event.result as string[])
+        else if (event.type === 'done')        setLoading(false)
         else if (event.type === 'error')       { setError(event.message!); setLoading(false) }
       }
     }
@@ -271,6 +239,8 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
     e.preventDefault()
     runSearch(query)
   }
+
+  const hasResults = collections !== null && collections.length > 0
 
   return (
     <div className="min-h-screen bg-[--bg]">
@@ -478,7 +448,7 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
         )}
 
         {/* Occasion / theme tiles — empty state only */}
-        {!loading && !result && (
+        {!loading && !hasResults && (
           <div className="mt-8" style={{ animation: 'fadeUp 0.5s 0.25s ease both', opacity: 0 }}>
             <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[rgba(26,26,26,0.35)] mb-3">
               {config.occasionSectionLabel}
@@ -511,22 +481,13 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
         )}
       </section>
 
-      {result && refinements && (
+      {hasResults && refinements && (
         <RefinementChips
           chips={refinements}
           onRefine={chip => runSearch(`${query} — ${chip}`)}
         />
       )}
-      {result && (
-        <OutfitResults
-          outfits={result}
-          groupLabel={config.itemGroupLabel}
-          totalLabel={config.totalLabel}
-          supportsVisualise={config.supportsVisualise}
-          visualiseMode={config.visualiseMode}
-        />
-      )}
-      {result && <ProductCollections collections={collections} />}
+      {(hasResults || loading) && <ProductCollections collections={collections} />}
     </div>
   )
 }

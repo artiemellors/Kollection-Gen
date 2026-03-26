@@ -16,8 +16,6 @@ export interface CategoryConfig {
   // outfits has gender-keyed tiles; all others use a flat array
   occasionTiles: Record<'men' | 'women' | 'all', Tile[]> | Tile[]
   showGenderFilter: boolean
-  supportsVisualise?: boolean
-  visualiseMode?: 'room' | 'outfit'
   systemPrompt: string
   // URL-encoded Kmart category filter string appended to the search URL.
   // Decoded form shown in comments. Empty string = no category restriction.
@@ -28,13 +26,17 @@ export interface CategoryConfig {
   loadingCopy: { thinking: string[]; searching: string[]; curating: string[] }
 }
 
+// ─── Shared collection prompt fragment ──────────────────────────────────────
+
+const COLLECTION_PROMPT_SUFFIX = `Each product in search results has an "id", "name", "price", "dataId", and "colour" field. When calling present_collections, reference products by their id only — do not repeat name, price, or URLs. Group ALL products into 2–4 themed collections. Each collection should have 6–20 products. Every product should appear in exactly one collection. Give each collection a short evocative name (e.g. "Resort Ready", "Off-Duty Cool", "Weekend Edit"). Use the colour field to build cohesive collections — prefer combinations where colours complement each other. You MUST call present_collections even if some searches returned no results. Do not use emojis in collection names.`
+
 // ─── Outfits ─────────────────────────────────────────────────────────────────
 
 const OUTFITS_CONFIG: CategoryConfig = {
   slug: 'outfits',
   label: 'Outfits',
-  heroHeadline: 'Find your complete look.',
-  heroSubline: 'Style Intelligence',
+  heroHeadline: 'Curate clothing collections at scale.',
+  heroSubline: 'Collection Intelligence',
   searchPlaceholder: 'e.g. smart casual for a job interview',
   exampleQueries: [
     'night out for a stag party',
@@ -48,10 +50,8 @@ const OUTFITS_CONFIG: CategoryConfig = {
     'streetwear for a teen boy',
     "workwear that doesn't feel boring",
   ],
-  occasionSectionLabel: 'Popular occasions',
+  occasionSectionLabel: 'Popular themes',
   showGenderFilter: true,
-  supportsVisualise: true,
-  visualiseMode: 'outfit',
   occasionTiles: {
     men: [
       { label: 'Stag Night',     query: 'night out for a stag party' },
@@ -84,13 +84,13 @@ const OUTFITS_CONFIG: CategoryConfig = {
       { label: 'Workwear',       query: "workwear that doesn't feel boring" },
     ],
   },
-  systemPrompt: `You are an outfit curator for Kmart Australia. Given a user's clothing request:
+  systemPrompt: `You are a collection curator for Kmart Australia. Given a user's clothing request:
 1. In your FIRST response, call search_kmart and/or browse_collection for ALL categories at once — emit all tool calls together, do not wait between them. Max 5 calls total.
    - Use browse_collection when a collection id from the provided list is a strong match for the user's request (e.g. "blazers-for-women" for a formal women's look).
    - Use search_kmart for specific product types not covered by a collection.
-2. Once you have the search results, call present_outfits — do NOT describe outfits in text.
+2. Once you have the search results, call present_collections — do NOT describe collections in text.
 
-Each product in search results has an "id", "name", "price", and "colour" field. When calling present_outfits, reference products by their id only — do not repeat name, price, or URLs. Provide 2–4 named outfit pairings. For each outfit, group items by category (Top, Bottom, Footwear, etc.) with 3–5 product alternatives per slot. Use the colour field to build cohesive outfits — prefer combinations where colours complement each other (e.g. neutrals together, or a statement colour paired with neutrals). You MUST call present_outfits even if some searches returned no results. Do not use emojis in outfit names or descriptions.`,
+${COLLECTION_PROMPT_SUFFIX}`,
   // filters[Category][]=Clothing, Activewear, Shoes
   categoryFilter:
     '&filters%5BCategory%5D%5B%5D=Clothing' +
@@ -105,8 +105,8 @@ Each product in search results has an "id", "name", "price", and "colour" field.
     'mule', 'slipper', 'flannel', 'cargo', 'bucket', 'linen', 'cotton', 'hi-vis',
     'mens', 'womens', "men's", "women's", 'hi vis', 'everlast',
   ],
-  itemGroupLabel: 'Selected Look',
-  totalLabel: 'Complete outfit',
+  itemGroupLabel: 'Collection',
+  totalLabel: 'Full collection',
   loadingCopy: {
     thinking: [
       'Reading your brief…',
@@ -130,14 +130,14 @@ Each product in search results has an "id", "name", "price", and "colour" field.
       'Looking for a good match…',
     ],
     curating: [
-      'Pulling the look together…',
-      'Almost dressed…',
+      'Building the collection…',
+      'Almost there…',
       'Finishing touches…',
-      'Nearly ready to wear…',
+      'Grouping the products…',
       'Making sure it all works…',
-      'Pairing things up…',
+      'Curating the edit…',
       'Getting the details right…',
-      'Putting the final look together…',
+      'Putting the collection together…',
     ],
   },
 }
@@ -147,8 +147,8 @@ Each product in search results has an "id", "name", "price", and "colour" field.
 const HOME_CONFIG: CategoryConfig = {
   slug: 'home',
   label: 'Home & Living',
-  heroHeadline: 'Style your space.',
-  heroSubline: 'Home Intelligence',
+  heroHeadline: 'Curate home collections at scale.',
+  heroSubline: 'Collection Intelligence',
   searchPlaceholder: 'e.g. cosy living room refresh with warm tones',
   exampleQueries: [
     'living room refresh with cushions, throws and a rug',
@@ -160,9 +160,8 @@ const HOME_CONFIG: CategoryConfig = {
     'home office desk setup with storage and decor',
     'kids bedroom with storage, lighting and fun decor',
   ],
-  occasionSectionLabel: 'Popular looks',
+  occasionSectionLabel: 'Popular themes',
   showGenderFilter: false,
-  supportsVisualise: true,
   occasionTiles: [
     { label: 'Living Room Refresh', query: 'living room refresh with cushions, throws and a rug' },
     { label: 'Bedroom Makeover',    query: 'bedroom update with new linen, lighting and decor' },
@@ -173,13 +172,13 @@ const HOME_CONFIG: CategoryConfig = {
     { label: 'Home Office',         query: 'home office desk setup with storage and decor' },
     { label: 'Kids Room',           query: 'kids bedroom with storage, lighting and fun decor' },
   ] as Tile[],
-  systemPrompt: `You are a home styling curator for Kmart Australia. Given a user's home décor request:
+  systemPrompt: `You are a home styling collection curator for Kmart Australia. Given a user's home décor request:
 1. In your FIRST response, call search_kmart and/or browse_collection for ALL relevant product types at once — emit all tool calls together. Max 5 calls total.
    - Use browse_collection when a collection id is a strong match.
    - Use search_kmart for specific product types not covered by a collection.
-2. Once you have results, call present_outfits — do NOT describe looks in text.
+2. Once you have results, call present_collections — do NOT describe collections in text.
 
-Each product has an "id", "name", "price", and "colour" field. When calling present_outfits, reference products by their id only. Provide 2–4 named room looks. For each look, group items by room element (Cushions, Rug, Throw, Lighting, Wall Art, Storage, Vase, etc.) with 3–5 product alternatives per slot. Use colour to build cohesive looks — prefer combinations where tones complement each other. You MUST call present_outfits even if some searches returned no results. Do not use emojis in look names or descriptions.`,
+${COLLECTION_PROMPT_SUFFIX}`,
   // filters[Category][]=Cushions, Indoor Cushions, Rugs, Quilt Cover Sets, Sheeting,
   //   Quilts, Coverlets & Comforters, Lighting, Vases, Decor Accessories, Wall Art,
   //   Candles & Home Fragrance, Artificial plants & flowers, Baskets, Curtains & Rods
@@ -205,8 +204,8 @@ Each product has an "id", "name", "price", and "colour" field. When calling pres
     'home', 'living', 'bedroom', 'bathroom', 'outdoor', 'garden', 'curtain', 'blind',
     'quilt', 'duvet', 'pillow', 'coverlet', 'sheeting', 'artificial', 'plant',
   ],
-  itemGroupLabel: 'Room Look',
-  totalLabel: 'Complete room',
+  itemGroupLabel: 'Collection',
+  totalLabel: 'Full collection',
   loadingCopy: {
     thinking: [
       'Reading your brief…',
@@ -223,10 +222,10 @@ Each product has an "id", "name", "price", and "colour" field. When calling pres
       'Sorting through the options…',
     ],
     curating: [
-      'Pulling the look together…',
+      'Building the collection…',
       'Finishing touches…',
       'Making sure it all works…',
-      'Putting the final room together…',
+      'Putting the collection together…',
     ],
   },
 }
@@ -236,8 +235,8 @@ Each product has an "id", "name", "price", and "colour" field. When calling pres
 const KITCHEN_CONFIG: CategoryConfig = {
   slug: 'kitchen',
   label: 'Kitchen & Dining',
-  heroHeadline: 'Kit out your kitchen.',
-  heroSubline: 'Kitchen Intelligence',
+  heroHeadline: 'Curate kitchen collections at scale.',
+  heroSubline: 'Collection Intelligence',
   searchPlaceholder: 'e.g. complete cookware set for weeknight dinners',
   exampleQueries: [
     'roast dinner cookware and serving pieces',
@@ -249,9 +248,8 @@ const KITCHEN_CONFIG: CategoryConfig = {
     'coffee station with appliances, mugs and storage',
     'kids lunch boxes, containers and drink bottles',
   ],
-  occasionSectionLabel: 'Popular sets',
+  occasionSectionLabel: 'Popular themes',
   showGenderFilter: false,
-  supportsVisualise: true,
   occasionTiles: [
     { label: 'Sunday Roast',     query: 'roast dinner cookware and serving pieces' },
     { label: 'Weeknight Dinners', query: 'weeknight dinner pots, pans and utensils' },
@@ -262,13 +260,13 @@ const KITCHEN_CONFIG: CategoryConfig = {
     { label: 'Coffee Corner',    query: 'coffee station with appliances, mugs and storage' },
     { label: 'Kids Lunches',     query: 'kids lunch boxes, containers and drink bottles' },
   ] as Tile[],
-  systemPrompt: `You are a kitchen and dining curator for Kmart Australia. Given a user's kitchen or dining request:
+  systemPrompt: `You are a kitchen and dining collection curator for Kmart Australia. Given a user's kitchen or dining request:
 1. In your FIRST response, call search_kmart and/or browse_collection for ALL relevant product types at once — emit all tool calls together. Max 5 calls total.
    - Use browse_collection when a collection id is a strong match.
    - Use search_kmart for specific product types not covered by a collection.
-2. Once you have results, call present_outfits — do NOT describe sets in text.
+2. Once you have results, call present_collections — do NOT describe collections in text.
 
-Each product has an "id", "name", "price", and "colour" field. When calling present_outfits, reference products by their id only. Provide 2–4 named kitchen sets. For each set, group items by category (Cookware, Utensils, Tableware, Storage, Appliance, Bakeware, etc.) with 3–5 product alternatives per slot. Use colour and material to build cohesive sets. You MUST call present_outfits even if some searches returned no results. Do not use emojis in set names or descriptions.`,
+${COLLECTION_PROMPT_SUFFIX}`,
   // filters[Category][]=Cookware, Bakeware, Kitchen Appliances, Dinnerware, Serveware, Kitchen Storage
   categoryFilter:
     '&filters%5BCategory%5D%5B%5D=Cookware' +
@@ -283,8 +281,8 @@ Each product has an "id", "name", "price", and "colour" field. When calling pres
     'kettle', 'toaster', 'blender', 'coffee', 'kitchen', 'dining', 'tableware',
     'serveware', 'colander', 'strainer', 'dinner', 'lunch', 'breakfast',
   ],
-  itemGroupLabel: 'Kitchen Set',
-  totalLabel: 'Complete set',
+  itemGroupLabel: 'Collection',
+  totalLabel: 'Full collection',
   loadingCopy: {
     thinking: [
       'Reading your brief…',
@@ -300,10 +298,10 @@ Each product has an "id", "name", "price", and "colour" field. When calling pres
       'Comparing the options…',
     ],
     curating: [
-      'Bringing the set together…',
+      'Building the collection…',
       'Finishing touches…',
       'Making sure it all fits…',
-      'Putting the final set together…',
+      'Putting the collection together…',
     ],
   },
 }
@@ -313,8 +311,8 @@ Each product has an "id", "name", "price", and "colour" field. When calling pres
 const PARTIES_CONFIG: CategoryConfig = {
   slug: 'parties',
   label: 'Kids Parties',
-  heroHeadline: 'Plan the perfect party.',
-  heroSubline: 'Party Intelligence',
+  heroHeadline: 'Curate party collections at scale.',
+  heroSubline: 'Collection Intelligence',
   searchPlaceholder: 'e.g. dinosaur theme birthday party for a 5 year old',
   exampleQueries: [
     'rainbow theme birthday party decorations and tableware',
@@ -328,7 +326,6 @@ const PARTIES_CONFIG: CategoryConfig = {
   ],
   occasionSectionLabel: 'Popular themes',
   showGenderFilter: false,
-  supportsVisualise: true,
   occasionTiles: [
     { label: 'Rainbow Birthday',  query: 'rainbow theme birthday party decorations and tableware' },
     { label: 'Dinosaur Party',    query: 'dinosaur theme party tableware, decorations and activities' },
@@ -339,13 +336,13 @@ const PARTIES_CONFIG: CategoryConfig = {
     { label: 'Movie Night Party', query: 'movie night party setup for kids with decorations and snacks' },
     { label: 'Arts & Crafts',     query: 'arts and crafts activity party for children' },
   ] as Tile[],
-  systemPrompt: `You are a kids party planning curator for Kmart Australia. Given a user's party theme request:
+  systemPrompt: `You are a kids party collection curator for Kmart Australia. Given a user's party theme request:
 1. In your FIRST response, call search_kmart and/or browse_collection for ALL relevant product types at once — emit all tool calls together. Max 5 calls total.
    - Use browse_collection when a collection id is a strong match.
    - Use search_kmart for specific product types not covered by a collection.
-2. Once you have results, call present_outfits — do NOT describe packs in text.
+2. Once you have results, call present_collections — do NOT describe collections in text.
 
-Each product has an "id", "name", "price", and "colour" field. When calling present_outfits, reference products by their id only. Provide 2–4 named party packs. For each pack, group items by category (Decorations, Tableware, Balloons, Costumes, Activities, etc.) with 3–5 product alternatives per slot. Build cohesive packs by theme and colour. You MUST call present_outfits even if some searches returned no results. Do not use emojis in pack names or descriptions.`,
+${COLLECTION_PROMPT_SUFFIX}`,
   // filters[Category][]=Balloons, Decorations, Candles & Toppers, Party Plates & Bowls,
   //   Party Napkins, Party Cups, Party Cutlery, Party Serveware & Accessories,
   //   Party Favours & Glow, Table Decor, Loots Bags & Invites, Pretend Play & Dress Up,
@@ -369,8 +366,8 @@ Each product has an "id", "name", "price", and "colour" field. When calling pres
     'banner', 'streamer', 'confetti', 'costume', 'dress up', 'game', 'activity',
     'craft', 'goody bag', 'birthday', 'celebration', 'pinata', 'candle', 'topper',
   ],
-  itemGroupLabel: 'Party Pack',
-  totalLabel: 'Complete party pack',
+  itemGroupLabel: 'Collection',
+  totalLabel: 'Full collection',
   loadingCopy: {
     thinking: [
       'Reading your brief…',
@@ -386,10 +383,10 @@ Each product has an "id", "name", "price", and "colour" field. When calling pres
       'Scanning the collection…',
     ],
     curating: [
-      'Pulling the party together…',
+      'Building the collection…',
       'Finishing touches…',
       'Getting the details right…',
-      'Almost party-ready…',
+      'Almost ready…',
     ],
   },
 }
@@ -399,8 +396,8 @@ Each product has an "id", "name", "price", and "colour" field. When calling pres
 const EASTER_CONFIG: CategoryConfig = {
   slug: 'easter',
   label: 'Easter',
-  heroHeadline: 'Make Easter memorable.',
-  heroSubline: 'Easter Curator',
+  heroHeadline: 'Curate Easter collections at scale.',
+  heroSubline: 'Collection Intelligence',
   searchPlaceholder: 'e.g. Easter egg hunt supplies for kids',
   exampleQueries: [
     'Easter egg hunt baskets, buckets and outdoor decorations',
@@ -409,9 +406,8 @@ const EASTER_CONFIG: CategoryConfig = {
     'Easter brunch tableware, serveware and decorations',
     'kids Easter activity kit with crafts, games and novelties',
   ],
-  occasionSectionLabel: 'Popular looks',
+  occasionSectionLabel: 'Popular themes',
   showGenderFilter: false,
-  supportsVisualise: true,
   occasionTiles: [
     { label: 'Egg Hunt',      query: 'Easter egg hunt baskets, buckets and outdoor decorations' },
     { label: 'Easter Table',  query: 'Easter table setting with tableware, centrepieces and decorations' },
@@ -419,13 +415,13 @@ const EASTER_CONFIG: CategoryConfig = {
     { label: 'Easter Brunch', query: 'Easter brunch tableware, serveware and decorations' },
     { label: 'Kids Easter',   query: 'kids Easter activity kit with crafts, games and novelties' },
   ] as Tile[],
-  systemPrompt: `You are an Easter styling and gifting curator for Kmart Australia. Given a user's Easter request:
+  systemPrompt: `You are an Easter collection curator for Kmart Australia. Given a user's Easter request:
 1. In your FIRST response, call search_kmart and/or browse_collection for ALL relevant product types at once — emit all tool calls together. Max 5 calls total.
    - Use browse_collection when a collection id is a strong match.
    - Use search_kmart for specific product types not covered by a collection.
-2. Once you have results, call present_outfits — do NOT describe sets in text.
+2. Once you have results, call present_collections — do NOT describe collections in text.
 
-Each product has an "id", "name", "price", and "colour" field. When calling present_outfits, reference products by their id only. Provide 2–3 named Easter sets. For each set, group items by category (Decorations, Tableware, Baskets, Activities, etc.) with 3–5 product alternatives per slot. Build cohesive sets by theme and colour. Favour pastel palettes and seasonal items. You MUST call present_outfits even if some searches returned no results. Do not use emojis in set names or descriptions.`,
+${COLLECTION_PROMPT_SUFFIX}`,
   // filters[Category][]=Decorations, Table Decor, Candles & Toppers, Balloons,
   //   Party Plates & Bowls, Party Napkins, Party Cups, Party Serveware & Accessories,
   //   Kids Art, Craft & Stationery, Pretend Play & Dress Up
@@ -444,8 +440,8 @@ Each product has an "id", "name", "price", and "colour" field. When calling pres
     'easter', 'egg', 'bunny', 'rabbit', 'seasonal', 'basket', 'hunt', 'pastel',
     'spring', 'chick', 'decoration', 'tableware', 'craft', 'activity',
   ],
-  itemGroupLabel: 'Easter Set',
-  totalLabel: 'Complete Easter set',
+  itemGroupLabel: 'Collection',
+  totalLabel: 'Full collection',
   loadingCopy: {
     thinking: [
       'Planning your Easter…',
@@ -459,7 +455,7 @@ Each product has an "id", "name", "price", and "colour" field. When calling pres
       'Scanning the range…',
     ],
     curating: [
-      'Curating your Easter set…',
+      'Curating the collection…',
       'Putting it all together…',
       'Finishing touches…',
       'Almost ready…',

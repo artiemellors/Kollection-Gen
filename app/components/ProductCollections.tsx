@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import * as XLSX from 'xlsx'
 
 const useKosmos = process.env.NEXT_PUBLIC_SHOW_NEW_FEATURE === 'true'
 
 interface CollectionProduct {
   name: string
   price: string
+  dataId?: string
   colour?: string
   productUrl?: string
   imageUrl?: string
@@ -16,6 +18,13 @@ interface CollectionProduct {
 export interface ProductCollection {
   name: string
   products: CollectionProduct[]
+}
+
+function exportToExcel(dataIds: string[], filename: string) {
+  const ws = XLSX.utils.aoa_to_sheet([['Product ID'], ...dataIds.map(id => [id])])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Products')
+  XLSX.writeFile(wb, `${filename}.xlsx`)
 }
 
 function SkeletonCard() {
@@ -43,13 +52,22 @@ function SkeletonCard() {
   )
 }
 
-function KmartProductCard({ p, animDelay }: { p: CollectionProduct; animDelay: number }) {
+function KmartProductCard({
+  p,
+  animDelay,
+  isSelected,
+  onToggleSelect,
+}: {
+  p: CollectionProduct
+  animDelay: number
+  isSelected: boolean
+  onToggleSelect: () => void
+}) {
   const hasAlt = !!p.altImageUrl
   const [showAlt, setShowAlt] = useState(false)
 
   useEffect(() => {
     if (!hasAlt) return
-    // Auto-cycle on touch/mobile devices (no hover support)
     if (!window.matchMedia('(hover: hover)').matches) {
       const id = setInterval(() => setShowAlt(v => !v), 2500)
       return () => clearInterval(id)
@@ -57,15 +75,30 @@ function KmartProductCard({ p, animDelay }: { p: CollectionProduct; animDelay: n
   }, [hasAlt])
 
   return (
-    <a
-      href={p.productUrl ?? '#'}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex flex-col"
+    <div
+      className={`flex flex-col relative group cursor-pointer transition-all duration-150 rounded-[8px] ${
+        isSelected ? 'ring-2 ring-[var(--accent)] bg-[rgba(23,104,176,0.03)]' : ''
+      }`}
       style={{ animation: `fadeUp 300ms ${animDelay}ms ease both` }}
+      onClick={onToggleSelect}
       onMouseEnter={() => hasAlt && setShowAlt(true)}
       onMouseLeave={() => hasAlt && setShowAlt(false)}
     >
+      {/* Selection checkbox */}
+      <div
+        className={`absolute top-2 left-2 z-10 w-6 h-6 rounded border-2 flex items-center justify-center
+                    transition-all duration-150 ${
+                      isSelected
+                        ? 'bg-[var(--accent)] border-[var(--accent)]'
+                        : 'bg-white/80 border-black/20 opacity-0 group-hover:opacity-100'
+                    }`}
+        style={{ backdropFilter: 'blur(4px)' }}
+      >
+        {isSelected && (
+          <i className="fa-solid fa-check text-white text-[11px]" />
+        )}
+      </div>
+
       <div className="relative bg-[#F4F5F6] overflow-hidden rounded-[8px]">
         <div className="aspect-[4/5] w-full relative">
           {p.imageUrl && (
@@ -94,19 +127,110 @@ function KmartProductCard({ p, animDelay }: { p: CollectionProduct; animDelay: n
           {p.name}
         </p>
         {p.colour && (
-          <p className="text-[11px] text-[rgba(26,26,26,0.5)] mb-3">{p.colour}</p>
+          <p className="text-[11px] text-[rgba(26,26,26,0.5)] mb-2">{p.colour}</p>
         )}
-        <p className="font-bold text-[#1a1a1a] leading-none text-[24px]">
-          <span className="text-[16px] font-bold align-top" style={{ marginTop: '3px', display: 'inline-block' }}>$</span>
+        {p.dataId && (
+          <p className="text-[11px] font-mono text-[rgba(26,26,26,0.4)] mb-2">ID: {p.dataId}</p>
+        )}
+        <div className="flex items-center justify-between">
+          <p className="font-bold text-[#1a1a1a] leading-none text-[24px]">
+            <span className="text-[16px] font-bold align-top" style={{ marginTop: '3px', display: 'inline-block' }}>$</span>
+            {p.price.startsWith('$') ? p.price.slice(1) : p.price}
+          </p>
+          {p.productUrl && (
+            <a
+              href={p.productUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] font-semibold transition-colors hover:underline"
+              style={{ color: 'var(--accent)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              View ↗
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OriginalProductCard({
+  p,
+  animDelay,
+  isSelected,
+  onToggleSelect,
+}: {
+  p: CollectionProduct
+  animDelay: number
+  isSelected: boolean
+  onToggleSelect: () => void
+}) {
+  return (
+    <div
+      onClick={onToggleSelect}
+      className={`bg-white rounded-lg overflow-hidden flex flex-col transition-all duration-150 cursor-pointer ${
+        isSelected ? 'ring-2 ring-[var(--accent)]' : ''
+      }`}
+      style={{ animation: `fadeUp 300ms ${animDelay}ms ease both` }}
+    >
+      {/* Selection checkbox */}
+      <div
+        className={`absolute top-2 left-2 z-10 w-6 h-6 rounded border-2 flex items-center justify-center
+                    transition-all duration-150 ${
+                      isSelected
+                        ? 'bg-[var(--accent)] border-[var(--accent)]'
+                        : 'bg-white/80 border-black/20 opacity-0 group-hover:opacity-100'
+                    }`}
+      >
+        {isSelected && (
+          <i className="fa-solid fa-check text-white text-[11px]" />
+        )}
+      </div>
+
+      <div className="relative bg-white rounded-lg">
+        {p.imageUrl ? (
+          <img
+            src={p.imageUrl}
+            alt={p.name}
+            className="aspect-[4/5] w-full object-contain rounded-lg"
+            style={{ animation: `imgFadeIn 180ms ease-out, imgJiggle 350ms ease-out`, mixBlendMode: 'multiply' }}
+          />
+        ) : (
+          <div className="aspect-[4/5] w-full bg-[--surface2] rounded-lg" />
+        )}
+      </div>
+      <div id="ProductCard-content" className="p-3 flex flex-col flex-1">
+        <p className="text-[14px] font-normal leading-tight line-clamp-2 text-[--text] mb-2">
+          {p.name}
+        </p>
+        {p.dataId && (
+          <p className="text-[11px] font-mono text-[rgba(26,26,26,0.4)] mb-2">ID: {p.dataId}</p>
+        )}
+        <p className="text-xl font-bold text-[--text] leading-none mb-3">
+          <span className="text-xs font-bold align-top">$</span>
           {p.price.startsWith('$') ? p.price.slice(1) : p.price}
         </p>
+        {p.productUrl && (
+          <a
+            href={p.productUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] font-semibold mt-auto"
+            style={{ color: 'var(--accent)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            View at Kmart ↗
+          </a>
+        )}
       </div>
-    </a>
+    </div>
   )
 }
 
 export function ProductCollections({ collections }: { collections: ProductCollection[] | null }) {
   const [activeTab, setActiveTab] = useState(0)
+  const [selected, setSelected] = useState<Map<number, Set<number>>>(new Map())
   const isLoading = collections === null
 
   // Reset active tab when collections change
@@ -114,9 +238,66 @@ export function ProductCollections({ collections }: { collections: ProductCollec
     setActiveTab(0)
   }
 
-  if (!isLoading && collections.length === 0) return null
+  // Reset selections when collections change
+  useEffect(() => {
+    setSelected(new Map())
+  }, [collections])
 
   const activeCollection = isLoading ? null : collections[activeTab]
+  const activeSelected = selected.get(activeTab) ?? new Set<number>()
+  const selectedCount = activeSelected.size
+
+  const toggleSelect = useCallback((productIndex: number) => {
+    setSelected(prev => {
+      const next = new Map(prev)
+      const tabSet = new Set(next.get(activeTab) ?? [])
+      if (tabSet.has(productIndex)) {
+        tabSet.delete(productIndex)
+      } else {
+        tabSet.add(productIndex)
+      }
+      next.set(activeTab, tabSet)
+      return next
+    })
+  }, [activeTab])
+
+  const selectAll = useCallback(() => {
+    if (!activeCollection) return
+    setSelected(prev => {
+      const next = new Map(prev)
+      next.set(activeTab, new Set(activeCollection.products.map((_, i) => i)))
+      return next
+    })
+  }, [activeTab, activeCollection])
+
+  const deselectAll = useCallback(() => {
+    setSelected(prev => {
+      const next = new Map(prev)
+      next.set(activeTab, new Set())
+      return next
+    })
+  }, [activeTab])
+
+  const handleExportAll = useCallback(() => {
+    if (!activeCollection) return
+    const dataIds = activeCollection.products
+      .map(p => p.dataId)
+      .filter((id): id is string => !!id)
+    if (dataIds.length === 0) return
+    exportToExcel(dataIds, `${activeCollection.name.replace(/\s+/g, '-').toLowerCase()}-all`)
+  }, [activeCollection])
+
+  const handleExportSelected = useCallback(() => {
+    if (!activeCollection) return
+    const dataIds = activeCollection.products
+      .filter((_, i) => activeSelected.has(i))
+      .map(p => p.dataId)
+      .filter((id): id is string => !!id)
+    if (dataIds.length === 0) return
+    exportToExcel(dataIds, `${activeCollection.name.replace(/\s+/g, '-').toLowerCase()}-selected`)
+  }, [activeCollection, activeSelected])
+
+  if (!isLoading && collections.length === 0) return null
 
   return (
     <div className="w-full bg-white border-t border-black/[0.06]">
@@ -124,13 +305,13 @@ export function ProductCollections({ collections }: { collections: ProductCollec
 
       {/* Section heading */}
       {useKosmos ? (
-        <p className="text-2xl font-bold text-[#1a1a1a] mt-8 mb-5">Shop the edit</p>
+        <p className="text-2xl font-bold text-[#1a1a1a] mt-8 mb-5">Collections</p>
       ) : (
-        <p className="text-xs font-bold tracking-[0.2em] uppercase text-[--text-muted] mt-8 mb-5">Shop the Edit</p>
+        <p className="text-xs font-bold tracking-[0.2em] uppercase text-[--text-muted] mt-8 mb-5">Collections</p>
       )}
 
-      {/* ProductCollections — sticky collection tab bar */}
-      <div id="ProductCollections-tabbar" className="sticky top-20 z-10 bg-white -mx-4 sm:-mx-8 px-4 sm:px-8 pt-4 mb-6">
+      {/* Collection tab bar */}
+      <div id="ProductCollections-tabbar" className="sticky top-20 z-10 bg-white -mx-4 sm:-mx-8 px-4 sm:px-8 pt-4 mb-4">
         <div className="flex gap-0 overflow-x-auto scrollbar-hide border-b border-black/[0.08]">
           {isLoading ? (
             <>
@@ -151,13 +332,65 @@ export function ProductCollections({ collections }: { collections: ProductCollec
                             }`}
               >
                 {col.name}
+                <span className="ml-1.5 text-[10px] opacity-60">({col.products.length})</span>
               </button>
             ))
           )}
         </div>
       </div>
 
-      {/* ProductCollections — product grid */}
+      {/* Export toolbar */}
+      {!isLoading && activeCollection && (
+        <div
+          className="flex flex-wrap items-center gap-3 mb-5 py-3 px-4 bg-[#F8F9FA] rounded-lg border border-black/[0.06]"
+          style={{ animation: 'fadeUp 200ms ease both' }}
+        >
+          <span className="text-[12px] text-[rgba(26,26,26,0.5)] mr-auto">
+            {selectedCount > 0
+              ? `${selectedCount} of ${activeCollection.products.length} selected`
+              : `${activeCollection.products.length} products`}
+          </span>
+
+          {/* Select / Deselect all */}
+          <button
+            onClick={selectedCount === activeCollection.products.length ? deselectAll : selectAll}
+            className="text-[11px] font-semibold tracking-wide uppercase px-3 py-1.5 rounded
+                       border border-black/[0.1] hover:border-black/[0.2] transition-all text-[rgba(26,26,26,0.6)]"
+          >
+            {selectedCount === activeCollection.products.length ? 'Deselect All' : 'Select All'}
+          </button>
+
+          {/* Export Selected */}
+          <button
+            onClick={handleExportSelected}
+            disabled={selectedCount === 0}
+            className="text-[11px] font-semibold tracking-wide uppercase px-3 py-1.5 rounded
+                       border transition-all flex items-center gap-1.5
+                       disabled:opacity-30 disabled:cursor-not-allowed"
+            style={{
+              borderColor: selectedCount > 0 ? 'var(--accent)' : 'rgba(0,0,0,0.1)',
+              color: selectedCount > 0 ? 'var(--accent)' : 'rgba(26,26,26,0.4)',
+            }}
+          >
+            <i className="fa-solid fa-file-arrow-down text-[10px]" />
+            Export Selected
+          </button>
+
+          {/* Export All */}
+          <button
+            onClick={handleExportAll}
+            className="text-[11px] font-semibold tracking-wide uppercase px-3 py-1.5 rounded
+                       text-white transition-all flex items-center gap-1.5
+                       hover:brightness-90 active:scale-[0.98]"
+            style={{ background: 'var(--accent)' }}
+          >
+            <i className="fa-solid fa-file-arrow-down text-[10px]" />
+            Export All
+          </button>
+        </div>
+      )}
+
+      {/* Product grid */}
       <div
         id="ProductCollections-grid"
         className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 ${useKosmos ? 'gap-x-3 gap-y-6' : 'gap-3'}`}
@@ -167,46 +400,21 @@ export function ProductCollections({ collections }: { collections: ProductCollec
         ) : activeCollection ? (
           activeCollection.products.map((p, i) => (
             useKosmos ? (
-              /* Kmart-style card: borderless, grey image area */
               <KmartProductCard
                 key={`${activeTab}-${i}`}
                 p={p}
                 animDelay={i * 35}
+                isSelected={activeSelected.has(i)}
+                onToggleSelect={() => toggleSelect(i)}
               />
             ) : (
-              /* Original card */
-              <a
+              <OriginalProductCard
                 key={`${activeTab}-${i}`}
-                href={p.productUrl ?? '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                id="ProductCard"
-                className="bg-white rounded-lg overflow-hidden flex flex-col transition-colors"
-                style={{ animation: `fadeUp 300ms ${i * 35}ms ease both` }}
-              >
-                <div className="relative bg-white rounded-lg">
-                  {p.imageUrl ? (
-                    <img
-                      src={p.imageUrl}
-                      alt={p.name}
-                      className="aspect-[4/5] w-full object-contain rounded-lg"
-                      style={{ animation: `imgFadeIn 180ms ease-out, imgJiggle 350ms ease-out`, mixBlendMode: 'multiply' }}
-                    />
-                  ) : (
-                    <div className="aspect-[4/5] w-full bg-[--surface2] rounded-lg" />
-                  )}
-                </div>
-                <div id="ProductCard-content" className="p-3 flex flex-col flex-1">
-                  <p className="text-[14px] font-normal leading-tight line-clamp-2 text-[--text] mb-3">
-                    {p.name}
-                  </p>
-                  <p className="text-xl font-bold text-[--text] leading-none mb-3">
-                    <span className="text-xs font-bold align-top">$</span>
-                    {p.price.startsWith('$') ? p.price.slice(1) : p.price}
-                  </p>
-                  <p className="text-[11px] font-semibold mt-auto" style={{ color: 'var(--accent)' }}>View at Kmart ↗</p>
-                </div>
-              </a>
+                p={p}
+                animDelay={i * 35}
+                isSelected={activeSelected.has(i)}
+                onToggleSelect={() => toggleSelect(i)}
+              />
             )
           ))
         ) : null}

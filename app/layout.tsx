@@ -16,8 +16,8 @@ const dmSans = DM_Sans({
 const useKosmos = process.env.NEXT_PUBLIC_SHOW_NEW_FEATURE === 'true'
 
 export const metadata: Metadata = {
-  title: 'Kmart Kurator',
-  description: 'Find the perfect outfit, home look, kitchen set or party pack — powered by Kmart.',
+  title: 'Kollection Gen',
+  description: 'Curate product collections at scale — powered by Kmart.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

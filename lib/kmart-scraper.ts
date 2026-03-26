@@ -1,6 +1,7 @@
 export interface Product {
   name: string
   price: string
+  dataId?: string
   colour?: string
   productUrl?: string
   imageUrl?: string
@@ -54,6 +55,7 @@ function mapProducts(candidates: Record<string, unknown>[]): Product[] {
         item.name ?? item.displayName ?? item.title ?? item.productName ??
         `Product ${i + 1}`
       ),
+      dataId: data?.id != null ? String(data.id) : undefined,
       price: (() => {
         const raw = data?.price ??
           (item.price as Record<string, unknown>)?.current ??

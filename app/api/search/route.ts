@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     : ''
 
   const SYSTEM_PROMPT = gender && config.showGenderFilter
-    ? `${config.systemPrompt}${collectionContext}\n\nIMPORTANT: The user is shopping for ${gender === 'men' ? 'a man' : 'a woman'} — every search query and all outfit suggestions must be for ${gender}'s clothing only. Prefix all search_kmart queries with "${gender === 'men' ? "men's" : "women's"}" unless the user has already specified it.`
+    ? `${config.systemPrompt}${collectionContext}\n\nIMPORTANT: The user is shopping for ${gender === 'men' ? 'a man' : 'a woman'} — every search query and all collection suggestions must be for ${gender}'s clothing only. Prefix all search_kmart queries with "${gender === 'men' ? "men's" : "women's"}" unless the user has already specified it.`
     : `${config.systemPrompt}${collectionContext}`
 
   const encoder = new TextEncoder()
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         const tools: Anthropic.Tool[] = [
           {
             name: 'search_kmart',
-            description: "Search Kmart Australia for products. Returns up to 10 products, each with an id, name, price, and colour.",
+            description: "Search Kmart Australia for products. Returns up to 24 products, each with an id, name, price, dataId, and colour.",
             input_schema: {
               type: 'object' as const,
               properties: { query: { type: 'string', description: "Search query, e.g. \"men's black t-shirt\"" } },
@@ -64,49 +64,38 @@ export async function POST(req: NextRequest) {
             },
           },
           {
-            name: 'present_outfits',
-            description: 'Present the final outfit recommendations. Call once all searches are done.',
+            name: 'present_collections',
+            description: 'Present the curated product collections. Call once all searches are done. Group ALL products into 2–4 themed collections.',
             input_schema: {
               type: 'object' as const,
               properties: {
-                outfits: {
+                collections: {
                   type: 'array',
                   items: {
                     type: 'object',
                     properties: {
-                      name: { type: 'string' },
-                      description: { type: 'string' },
-                      items: {
+                      name: { type: 'string', description: 'Short evocative collection name, e.g. "Resort Ready", "Off-Duty Cool"' },
+                      products: {
                         type: 'array',
-                        items: {
-                          type: 'object',
-                          properties: {
-                            category: { type: 'string' },
-                            description: { type: 'string' },
-                            alternatives: {
-                              type: 'array',
-                              description: 'Product ids from search results',
-                              items: { type: 'string' },
-                            },
-                          },
-                        },
+                        description: 'Product ids from search results',
+                        items: { type: 'string' },
                       },
                     },
+                    required: ['name', 'products'],
                   },
                 },
                 refinements: {
                   type: 'array',
                   items: { type: 'string' },
-                  description: '4–6 short refinement suggestions the user could apply to this search. Each should be a 2–5 word lowercase phrase, e.g. "make it more casual", "darker tones", "tighter budget", "add a layer", "more formal". Vary them — cover at least one price direction, one style shift, and one tone or colour direction.',
+                  description: '4–6 short refinement suggestions the user could apply to this search. Each should be a 2–5 word lowercase phrase, e.g. "make it more casual", "darker tones", "tighter budget". Vary them — cover at least one price direction, one style shift, and one tone or colour direction.',
                 },
               },
-              required: ['outfits'],
+              required: ['collections'],
             },
           },
         ]
 
-        const productMap = new Map<string, Product>()  // what Claude sees (10/search)
-        const fullPool = new Map<string, Product>()    // everything fetched (24/search)
+        const productMap = new Map<string, Product>()
         const messages: Anthropic.MessageParam[] = [{ role: 'user', content: query }]
         let turn = 0
         let searchIndex = 0
@@ -134,7 +123,7 @@ export async function POST(req: NextRequest) {
           messages.push({ role: 'assistant', content: response.content })
 
           if (response.stop_reason === 'end_turn') {
-            send({ type: 'error', message: 'Claude finished without calling present_outfits' })
+            send({ type: 'error', message: 'Claude finished without calling present_collections' })
             break
           }
 
@@ -143,41 +132,30 @@ export async function POST(req: NextRequest) {
               (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
             )
 
-            const presentBlock = toolBlocks.find(b => b.name === 'present_outfits')
+            const presentBlock = toolBlocks.find(b => b.name === 'present_collections')
             if (presentBlock) {
-              const rawOutfits = (presentBlock.input as {
-                outfits: Array<{
-                  name: string
-                  description: string
-                  items: Array<{ category: string; description: string; alternatives: string[] }>
-                }>
-              }).outfits
-              const outfitCount = Array.isArray(rawOutfits) ? rawOutfits.length : '?'
-              console.log(`[Claude] present_outfits called — ${outfitCount} outfits`)
-              if (Array.isArray(rawOutfits)) {
-                rawOutfits.forEach((o, i) => {
-                  console.log(`[Claude]   Outfit ${i + 1}: "${o.name}" — ${o.items?.length ?? 0} slots`)
-                })
-              }
-
-              // Collect all product IDs referenced in outfit slots
-              const usedInOutfits = new Set(
-                rawOutfits.flatMap(o => o.items.flatMap(i => i.alternatives))
-              )
+              const rawCollections = (presentBlock.input as {
+                collections: Array<{ name: string; products: string[] }>
+              }).collections
+              console.log(`[Claude] present_collections called — ${rawCollections.length} collections`)
 
               // Resolve product IDs back to full product objects
-              const outfits = rawOutfits.map(outfit => ({
-                ...outfit,
-                items: outfit.items.map(item => ({
-                  ...item,
-                  alternatives: item.alternatives
+              const resolvedCollections = rawCollections
+                .map(col => ({
+                  name: col.name,
+                  products: col.products
                     .map(id => productMap.get(id))
                     .filter((p): p is Product => p !== undefined),
-                })),
-              }))
+                }))
+                .filter(col => col.products.length > 0)
 
-              // Send outfit results immediately — don't wait for collections
-              send({ type: 'done', result: outfits })
+              console.log(`[Collections] ${resolvedCollections.length} collections resolved`)
+              resolvedCollections.forEach((col, i) => {
+                console.log(`[Collections]   ${i + 1}: "${col.name}" — ${col.products.length} products`)
+              })
+
+              // Send collections as primary result
+              send({ type: 'collections', result: resolvedCollections })
 
               // Emit AI-generated refinement chips
               const rawRefinements = (presentBlock.input as { refinements?: unknown }).refinements
@@ -188,86 +166,8 @@ export async function POST(req: NextRequest) {
                 send({ type: 'refinements', result: refinements })
               }
 
-              // Build collections from full pool products not used in outfits
-              const unusedProducts = [...fullPool.entries()]
-                .filter(([id]) => !usedInOutfits.has(id))
-                .map(([id, p]) => ({ id, name: p.name, price: p.price, colour: p.colour }))
-
-              console.log(`[Collections] ${unusedProducts.length} unused products in pool for collections`)
-
-              if (unusedProducts.length >= 8) {
-                send({ type: 'status', message: 'Curating collections…' })
-                try {
-                  // Pass products as a JSON array with numeric ids — same format Claude already
-                  // knows from outfit search results. Sonnet reliably echoes back the ids it's given.
-                  const productList = unusedProducts.map((p, i) => ({
-                    id: i,
-                    name: p.name,
-                    price: p.price,
-                    ...(p.colour ? { colour: p.colour } : {}),
-                  }))
-
-                  const targetPerCollection = Math.min(20, Math.floor(unusedProducts.length / 2))
-                  const collectionsResponse = await client.messages.create({
-                    model: 'claude-sonnet-4-6',
-                    max_tokens: 4096,
-                    system: `You are a product merchandiser for a Kmart ${config.label} finder app.
-A user searched for: "${query}".${gender && config.showGenderFilter ? ` The user is shopping for ${gender === 'men' ? 'a man' : 'a woman'} — only include ${gender}'s products.` : ''}
-Group these products into 2–3 themed collections that complement that search.
-Give each collection a short evocative name (e.g. "Resort Ready", "Off-Duty Cool", "Weekend Edit") that feels relevant to the user's intent.
-Aim for ${targetPerCollection} products per collection. Every product should appear in exactly one collection — distribute them all.
-Each product has a numeric "id" field. Use those exact id values in your response.
-Respond ONLY with valid JSON: { "collections": [{ "name": string, "products": number[] }] }`,
-                    messages: [{
-                      role: 'user',
-                      content: JSON.stringify(productList),
-                    }],
-                  })
-
-                  const text = (collectionsResponse.content[0] as Anthropic.TextBlock).text
-                  console.log(`[Collections] Sonnet raw response: ${text.slice(0, 300)}`)
-                  // Extract JSON by matching balanced braces (greedy regex fails when model
-                  // appends text after the closing brace that itself contains a `}`)
-                  const extractJson = (s: string): string | null => {
-                    const start = s.indexOf('{')
-                    if (start === -1) return null
-                    let depth = 0
-                    for (let i = start; i < s.length; i++) {
-                      if (s[i] === '{') depth++
-                      else if (s[i] === '}' && --depth === 0) return s.slice(start, i + 1)
-                    }
-                    return null
-                  }
-                  const jsonStr = extractJson(text)
-                  if (jsonStr) {
-                    const { collections: rawCollections } = JSON.parse(jsonStr) as {
-                      collections: Array<{ name: string; products: number[] }>
-                    }
-                    const resolvedCollections = rawCollections
-                      .map(col => ({
-                        name: col.name,
-                        products: col.products
-                          .flatMap(idx => {
-                            const entry = unusedProducts[idx]
-                            if (!entry) return []
-                            const product = fullPool.get(entry.id)
-                            return product ? [product] : []
-                          })
-                          .slice(0, 20),
-                      }))
-                      .filter(col => col.products.length >= 4)
-
-                    console.log(`[Collections] ${resolvedCollections.length} collections resolved`)
-                    if (resolvedCollections.length > 0) {
-                      send({ type: 'collections', result: resolvedCollections })
-                    }
-                  }
-                } catch (collErr) {
-                  console.error('[Collections] Failed to curate collections:', collErr)
-                  // Non-fatal — outfit results already sent
-                }
-              }
-
+              // Signal completion
+              send({ type: 'done' })
               return
             }
 
@@ -294,27 +194,25 @@ Respond ONLY with valid JSON: { "collections": [{ "name": string, "products": nu
 
             const toolResults: Anthropic.ToolResultBlockParam[] = allFetchBlocks.map(({ block, type, label }, i) => {
               const allProducts = config.showGenderFilter ? filterByGender(results[i], gender) : results[i]
-              const products = allProducts.slice(0, 10)  // Claude sees top 10
               const si = searchIndex++
-              console.log(`[${type === 'search' ? 'search_kmart' : 'browse_collection'}] "${label}" → ${allProducts.length} total, ${products.length} to Claude`)
-              if (products.length > 0) {
-                send({ type: 'status', message: `Found ${products.length} options for "${label}"` })
+              console.log(`[${type === 'search' ? 'search_kmart' : 'browse_collection'}] "${label}" → ${allProducts.length} products`)
+              if (allProducts.length > 0) {
+                send({ type: 'status', message: `Found ${allProducts.length} options for "${label}"` })
               } else {
                 send({ type: 'status', message: `No results for "${label}" — skipping` })
               }
 
-              // Tag Claude's 10 products and store in both maps
-              const tagged = products.map((p, pi) => {
+              // Tag all products and store in map — Claude sees everything
+              const tagged = allProducts.map((p, pi) => {
                 const id = `q${si}p${pi}`
                 productMap.set(id, p)
-                fullPool.set(id, p)
-                return { id, name: p.name, price: p.price, ...(p.colour ? { colour: p.colour } : {}) }
-              })
-
-              // Store the remaining products in fullPool only (not visible to Claude)
-              allProducts.slice(10).forEach((p, pi) => {
-                const id = `q${si}x${pi}`
-                fullPool.set(id, p)
+                return {
+                  id,
+                  name: p.name,
+                  price: p.price,
+                  ...(p.dataId ? { dataId: p.dataId } : {}),
+                  ...(p.colour ? { colour: p.colour } : {}),
+                }
               })
 
               return {
