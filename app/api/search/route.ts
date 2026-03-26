@@ -227,6 +227,7 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch (err) {
+        console.error('[Search API Error]', err)
         send({ type: 'error', message: String(err) })
       } finally {
         controller.close()
