@@ -342,10 +342,10 @@ export function ProductCollections({ collections }: { collections: ProductCollec
       {/* Export toolbar */}
       {!isLoading && activeCollection && (
         <div
-          className="flex flex-wrap items-center gap-3 mb-5 py-3 px-4 bg-[#F8F9FA] rounded-lg border border-black/[0.06]"
+          className="flex flex-wrap items-center gap-4 mb-6"
           style={{ animation: 'fadeUp 200ms ease both' }}
         >
-          <span className="text-[12px] text-[rgba(26,26,26,0.5)] mr-auto">
+          <span className="text-[11px] text-[rgba(26,26,26,0.35)] mr-auto">
             {selectedCount > 0
               ? `${selectedCount} of ${activeCollection.products.length} selected`
               : `${activeCollection.products.length} products`}
@@ -354,35 +354,31 @@ export function ProductCollections({ collections }: { collections: ProductCollec
           {/* Select / Deselect all */}
           <button
             onClick={selectedCount === activeCollection.products.length ? deselectAll : selectAll}
-            className="text-[11px] font-semibold tracking-wide uppercase px-3 py-1.5 rounded
-                       border border-black/[0.1] hover:border-black/[0.2] transition-all text-[rgba(26,26,26,0.6)]"
+            className="text-[11px] font-semibold tracking-[0.12em] uppercase
+                       transition-all text-[rgba(26,26,26,0.4)] hover:text-[rgba(26,26,26,0.7)]"
           >
             {selectedCount === activeCollection.products.length ? 'Deselect All' : 'Select All'}
           </button>
 
           {/* Export Selected */}
-          <button
-            onClick={handleExportSelected}
-            disabled={selectedCount === 0}
-            className="text-[11px] font-semibold tracking-wide uppercase px-3 py-1.5 rounded
-                       border transition-all flex items-center gap-1.5
-                       disabled:opacity-30 disabled:cursor-not-allowed"
-            style={{
-              borderColor: selectedCount > 0 ? 'var(--accent)' : 'rgba(0,0,0,0.1)',
-              color: selectedCount > 0 ? 'var(--accent)' : 'rgba(26,26,26,0.4)',
-            }}
-          >
-            <i className="fa-solid fa-file-arrow-down text-[10px]" />
-            Export Selected
-          </button>
+          {selectedCount > 0 && (
+            <button
+              onClick={handleExportSelected}
+              className="text-[11px] font-semibold tracking-[0.12em] uppercase
+                         transition-all flex items-center gap-1.5 hover:opacity-70"
+              style={{ color: 'var(--accent)' }}
+            >
+              <i className="fa-solid fa-file-arrow-down text-[10px]" />
+              Export Selected
+            </button>
+          )}
 
           {/* Export All */}
           <button
             onClick={handleExportAll}
-            className="text-[11px] font-semibold tracking-wide uppercase px-3 py-1.5 rounded
-                       text-white transition-all flex items-center gap-1.5
-                       hover:brightness-90 active:scale-[0.98]"
-            style={{ background: 'var(--accent)' }}
+            className="text-[11px] font-semibold tracking-[0.12em] uppercase
+                       transition-all flex items-center gap-1.5
+                       text-[rgba(26,26,26,0.4)] hover:text-[rgba(26,26,26,0.7)]"
           >
             <i className="fa-solid fa-file-arrow-down text-[10px]" />
             Export All
