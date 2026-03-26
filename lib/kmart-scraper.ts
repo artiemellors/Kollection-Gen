@@ -42,12 +42,11 @@ function mapProducts(candidates: Record<string, unknown>[]): Product[] {
           : item.thumbnail != null ? String(item.thumbnail)
           : undefined
     const altImageUrl = (() => {
-      if (!Array.isArray(item.images)) return undefined
-      for (const img of item.images as Record<string, unknown>[]) {
-        const url = String(img.url ?? img)
-        if (url && url !== 'undefined' && url !== imageUrl) return url
-      }
-      return undefined
+      const altImages = data?.altImages
+      if (!Array.isArray(altImages) || altImages.length === 0) return undefined
+      const partial = String(altImages[0])
+      if (!partial || partial === 'undefined') return undefined
+      return `https://assets.kmart.com.au/transform/${partial}?io=transform:fill,width:580,height:725`
     })()
     return {
       name: String(
