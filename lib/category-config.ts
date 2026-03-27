@@ -39,8 +39,8 @@ You MUST call present_collections even if some searches returned no results. Do 
 const OUTFITS_CONFIG: CategoryConfig = {
   slug: 'outfits',
   label: 'Outfits',
-  heroHeadline: 'Curate clothing collections at scale.',
-  heroSubline: 'Collection Intelligence',
+  heroHeadline: "Let's build a collection.",
+  heroSubline: 'Kollection Gen',
   searchPlaceholder: 'e.g. smart casual for a job interview',
   exampleQueries: [
     'night out for a stag party',
@@ -151,8 +151,8 @@ ${COLLECTION_PROMPT_SUFFIX}`,
 const HOME_CONFIG: CategoryConfig = {
   slug: 'home',
   label: 'Home & Living',
-  heroHeadline: 'Curate home collections at scale.',
-  heroSubline: 'Collection Intelligence',
+  heroHeadline: "Let's build a collection.",
+  heroSubline: 'Kollection Gen',
   searchPlaceholder: 'e.g. cosy living room refresh with warm tones',
   exampleQueries: [
     'living room refresh with cushions, throws and a rug',
@@ -239,8 +239,8 @@ ${COLLECTION_PROMPT_SUFFIX}`,
 const KITCHEN_CONFIG: CategoryConfig = {
   slug: 'kitchen',
   label: 'Kitchen & Dining',
-  heroHeadline: 'Curate kitchen collections at scale.',
-  heroSubline: 'Collection Intelligence',
+  heroHeadline: "Let's build a collection.",
+  heroSubline: 'Kollection Gen',
   searchPlaceholder: 'e.g. complete cookware set for weeknight dinners',
   exampleQueries: [
     'roast dinner cookware and serving pieces',
@@ -315,8 +315,8 @@ ${COLLECTION_PROMPT_SUFFIX}`,
 const PARTIES_CONFIG: CategoryConfig = {
   slug: 'parties',
   label: 'Kids Parties',
-  heroHeadline: 'Curate party collections at scale.',
-  heroSubline: 'Collection Intelligence',
+  heroHeadline: "Let's build a collection.",
+  heroSubline: 'Kollection Gen',
   searchPlaceholder: 'e.g. dinosaur theme birthday party for a 5 year old',
   exampleQueries: [
     'rainbow theme birthday party decorations and tableware',
@@ -400,8 +400,8 @@ ${COLLECTION_PROMPT_SUFFIX}`,
 const EASTER_CONFIG: CategoryConfig = {
   slug: 'easter',
   label: 'Easter',
-  heroHeadline: 'Curate Easter collections at scale.',
-  heroSubline: 'Collection Intelligence',
+  heroHeadline: "Let's build a collection.",
+  heroSubline: 'Kollection Gen',
   searchPlaceholder: 'e.g. Easter egg hunt supplies for kids',
   exampleQueries: [
     'Easter egg hunt baskets, buckets and outdoor decorations',
