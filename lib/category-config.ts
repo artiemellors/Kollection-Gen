@@ -39,7 +39,7 @@ You MUST call present_collections even if some searches returned no results. Do 
 const OUTFITS_CONFIG: CategoryConfig = {
   slug: 'outfits',
   label: 'Outfits',
-  heroHeadline: "Let's build a collection.",
+  heroHeadline: "Let's build a collection in apparel.",
   heroSubline: 'Kollection Gen',
   searchPlaceholder: 'e.g. smart casual for a job interview',
   exampleQueries: [
@@ -151,7 +151,7 @@ ${COLLECTION_PROMPT_SUFFIX}`,
 const HOME_CONFIG: CategoryConfig = {
   slug: 'home',
   label: 'Home & Living',
-  heroHeadline: "Let's build a collection.",
+  heroHeadline: "Let's build a collection in home & living.",
   heroSubline: 'Kollection Gen',
   searchPlaceholder: 'e.g. cosy living room refresh with warm tones',
   exampleQueries: [
@@ -239,7 +239,7 @@ ${COLLECTION_PROMPT_SUFFIX}`,
 const KITCHEN_CONFIG: CategoryConfig = {
   slug: 'kitchen',
   label: 'Kitchen & Dining',
-  heroHeadline: "Let's build a collection.",
+  heroHeadline: "Let's build a collection in kitchen & dining.",
   heroSubline: 'Kollection Gen',
   searchPlaceholder: 'e.g. complete cookware set for weeknight dinners',
   exampleQueries: [
@@ -315,7 +315,7 @@ ${COLLECTION_PROMPT_SUFFIX}`,
 const PARTIES_CONFIG: CategoryConfig = {
   slug: 'parties',
   label: 'Kids Parties',
-  heroHeadline: "Let's build a collection.",
+  heroHeadline: "Let's build a collection in kids parties.",
   heroSubline: 'Kollection Gen',
   searchPlaceholder: 'e.g. dinosaur theme birthday party for a 5 year old',
   exampleQueries: [
@@ -400,7 +400,7 @@ ${COLLECTION_PROMPT_SUFFIX}`,
 const EASTER_CONFIG: CategoryConfig = {
   slug: 'easter',
   label: 'Easter',
-  heroHeadline: "Let's build a collection.",
+  heroHeadline: "Let's build a collection in easter.",
   heroSubline: 'Kollection Gen',
   searchPlaceholder: 'e.g. Easter egg hunt supplies for kids',
   exampleQueries: [
