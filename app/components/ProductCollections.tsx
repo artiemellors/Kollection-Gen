@@ -10,10 +10,14 @@ interface CollectionProduct {
   price: string
   dataId?: string
   colour?: string
+  seller?: string
   productUrl?: string
   imageUrl?: string
   altImageUrl?: string
 }
+
+const SELLERS = ['Kmart', 'Target', 'Marketplace'] as const
+type Seller = typeof SELLERS[number]
 
 export interface ProductCollection {
   name: string
@@ -231,6 +235,7 @@ function OriginalProductCard({
 export function ProductCollections({ collections }: { collections: ProductCollection[] | null }) {
   const [activeTab, setActiveTab] = useState(-1)  // -1 = "All" tab
   const [selected, setSelected] = useState<Map<number, Set<number>>>(new Map())
+  const [activeSellers, setActiveSellers] = useState<Set<Seller>>(new Set(SELLERS))
   const isLoading = collections === null
 
   // Reset active tab when collections change
@@ -238,11 +243,32 @@ export function ProductCollections({ collections }: { collections: ProductCollec
     setActiveTab(-1)
   }
 
-  // Reset selections when collections change
+  // Reset selections and seller filters when collections change
   useEffect(() => {
     setSelected(new Map())
     setActiveTab(-1)
+    setActiveSellers(new Set(SELLERS))
   }, [collections])
+
+  const toggleSeller = useCallback((seller: Seller) => {
+    setActiveSellers(prev => {
+      const next = new Set(prev)
+      if (next.has(seller)) {
+        if (next.size > 1) next.delete(seller) // don't allow deselecting all
+      } else {
+        next.add(seller)
+      }
+      return next
+    })
+    // Reset selection when filters change
+    setSelected(new Map())
+  }, [])
+
+  // Filter products by active sellers
+  const filterBySeller = useCallback((products: CollectionProduct[]) => {
+    if (activeSellers.size === SELLERS.length) return products // all selected, skip filter
+    return products.filter(p => !p.seller || activeSellers.has(p.seller as Seller))
+  }, [activeSellers])
 
   // Compute the "All" virtual collection
   const allCollection: ProductCollection | null = isLoading ? null : {
@@ -250,7 +276,8 @@ export function ProductCollections({ collections }: { collections: ProductCollec
     products: collections.flatMap(col => col.products),
   }
 
-  const activeCollection = isLoading ? null : activeTab === -1 ? allCollection : collections[activeTab]
+  const rawCollection = isLoading ? null : activeTab === -1 ? allCollection : collections[activeTab]
+  const activeCollection = rawCollection ? { ...rawCollection, products: filterBySeller(rawCollection.products) } : null
   const activeSelected = selected.get(activeTab) ?? new Set<number>()
   const selectedCount = activeSelected.size
 
@@ -393,6 +420,29 @@ export function ProductCollections({ collections }: { collections: ProductCollec
             </>
           )}
         </div>
+
+        {/* Seller filter chips */}
+        {!isLoading && (
+          <div className="flex gap-2 mt-3">
+            {SELLERS.map(seller => {
+              const isActive = activeSellers.has(seller)
+              return (
+                <button
+                  key={seller}
+                  onClick={() => toggleSeller(seller)}
+                  className={`px-3 py-1 text-[11px] font-semibold tracking-wide rounded-full
+                              border transition-all duration-150 ${
+                                isActive
+                                  ? 'border-[var(--accent)] text-[var(--accent)] bg-[rgba(23,104,176,0.06)]'
+                                  : 'border-black/[0.1] text-[rgba(26,26,26,0.3)]'
+                              }`}
+                >
+                  {seller}
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Product grid */}

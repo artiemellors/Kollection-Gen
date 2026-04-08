@@ -8,6 +8,7 @@ export interface Product {
   price: string
   dataId?: string
   colour?: string
+  seller?: string
   productUrl?: string
   imageUrl?: string
   altImageUrl?: string
@@ -71,6 +72,12 @@ function mapProducts(candidates: Record<string, unknown>[]): Product[] {
         `Product ${i + 1}`
       ),
       dataId: data?.id != null ? String(data.id) : undefined,
+      seller: (() => {
+        const s = data?.Seller
+        if (Array.isArray(s) && s.length > 0) return String(s[0])
+        if (s != null) return String(s)
+        return undefined
+      })(),
       price: (() => {
         const raw = data?.price ??
           (item.price as Record<string, unknown>)?.current ??
@@ -128,7 +135,7 @@ export async function searchKmart(query: string, categoryFilter = ''): Promise<P
     `${SEARCH_BASE}/${encodeURIComponent(query)}` +
     `?num_results_per_page=100&page=1&sort_by=new&sort_order=descending` +
     `&key=${SEARCH_KEY}` +
-    `&filters%5BSeller%5D=Kmart` +
+    `&filters%5BSeller%5D=Kmart&filters%5BSeller%5D=Target&filters%5BSeller%5D=Marketplace` +
     categoryFilter
   console.log(`\n[Search] ${query}`)
   const res = await fetch(url, { headers: { Accept: 'application/json' } })
