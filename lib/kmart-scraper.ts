@@ -19,9 +19,19 @@ export interface Collection {
 }
 
 function mapProducts(candidates: Record<string, unknown>[]): Product[] {
+  // Filter out clearance and out-of-stock items, then deduplicate
+  const filtered = candidates.filter(item => {
+    const data = item.data as Record<string, unknown> | undefined
+    if (!data) return true
+    if (data.clearance === true) return false
+    const stateOOS = data.stateOOS as Record<string, unknown> | undefined
+    if (stateOOS && Object.keys(stateOOS).length > 0) return false
+    return true
+  })
+
   // Deduplicate by (name, colour) — collapses size variants into one per colour
   const seen = new Set<string>()
-  const deduplicated = candidates.filter(item => {
+  const deduplicated = filtered.filter(item => {
     const data = item.data as Record<string, unknown> | undefined
     const name = String(item.value ?? item.name ?? '')
     const colour = data?.Colour != null ? String(data.Colour) : ''
