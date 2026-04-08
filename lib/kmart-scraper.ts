@@ -126,7 +126,7 @@ export async function browseCollection(collectionId: string): Promise<Product[]>
 export async function searchKmart(query: string, categoryFilter = ''): Promise<Product[]> {
   const url =
     `${SEARCH_BASE}/${encodeURIComponent(query)}` +
-    `?num_results_per_page=48&page=1&sort_by=relevance&sort_order=descending` +
+    `?num_results_per_page=48&page=1&sort_by=new&sort_order=descending` +
     `&key=${SEARCH_KEY}` +
     `&filters%5BSeller%5D=Kmart` +
     categoryFilter
