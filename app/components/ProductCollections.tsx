@@ -229,21 +229,28 @@ function OriginalProductCard({
 }
 
 export function ProductCollections({ collections }: { collections: ProductCollection[] | null }) {
-  const [activeTab, setActiveTab] = useState(0)
+  const [activeTab, setActiveTab] = useState(-1)  // -1 = "All" tab
   const [selected, setSelected] = useState<Map<number, Set<number>>>(new Map())
   const isLoading = collections === null
 
   // Reset active tab when collections change
-  if (!isLoading && activeTab >= collections.length && collections.length > 0) {
-    setActiveTab(0)
+  if (!isLoading && activeTab > 0 && activeTab >= collections.length && collections.length > 0) {
+    setActiveTab(-1)
   }
 
   // Reset selections when collections change
   useEffect(() => {
     setSelected(new Map())
+    setActiveTab(-1)
   }, [collections])
 
-  const activeCollection = isLoading ? null : collections[activeTab]
+  // Compute the "All" virtual collection
+  const allCollection: ProductCollection | null = isLoading ? null : {
+    name: 'All',
+    products: collections.flatMap(col => col.products),
+  }
+
+  const activeCollection = isLoading ? null : activeTab === -1 ? allCollection : collections[activeTab]
   const activeSelected = selected.get(activeTab) ?? new Set<number>()
   const selectedCount = activeSelected.size
 
@@ -284,7 +291,8 @@ export function ProductCollections({ collections }: { collections: ProductCollec
       .map(p => p.dataId)
       .filter((id): id is string => !!id)
     if (dataIds.length === 0) return
-    exportToExcel(dataIds, `${activeCollection.name.replace(/\s+/g, '-').toLowerCase()}-all`)
+    const filename = activeCollection.name.replace(/\s+/g, '-').toLowerCase()
+    exportToExcel(dataIds, `${filename}-all`)
   }, [activeCollection])
 
   const handleExportSelected = useCallback(() => {
@@ -294,7 +302,8 @@ export function ProductCollections({ collections }: { collections: ProductCollec
       .map(p => p.dataId)
       .filter((id): id is string => !!id)
     if (dataIds.length === 0) return
-    exportToExcel(dataIds, `${activeCollection.name.replace(/\s+/g, '-').toLowerCase()}-selected`)
+    const filename = activeCollection.name.replace(/\s+/g, '-').toLowerCase()
+    exportToExcel(dataIds, `${filename}-selected`)
   }, [activeCollection, activeSelected])
 
   if (!isLoading && collections.length === 0) return null
@@ -353,21 +362,35 @@ export function ProductCollections({ collections }: { collections: ProductCollec
               <div className="skeleton h-4 w-24 mx-5 mb-3 rounded" />
             </>
           ) : (
-            collections.map((col, i) => (
+            <>
               <button
-                key={i}
-                onClick={() => setActiveTab(i)}
+                onClick={() => setActiveTab(-1)}
                 className={`px-5 pb-3 pt-1 text-[11px] tracking-[0.12em]
                             uppercase transition-all duration-200 whitespace-nowrap shrink-0 border-b-2
-                            ${i === activeTab
+                            ${activeTab === -1
                               ? `font-semibold ${useKosmos ? 'border-[#1768B0] text-[#1768B0]' : 'border-[--accent] text-[--accent]'}`
                               : 'font-normal border-transparent text-black/30 hover:text-black/50'
                             }`}
               >
-                {col.name}
-                <span className="ml-1.5 text-[10px] opacity-60">({col.products.length})</span>
+                All
+                <span className="ml-1.5 text-[10px] opacity-60">({allCollection?.products.length ?? 0})</span>
               </button>
-            ))
+              {collections.map((col, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveTab(i)}
+                  className={`px-5 pb-3 pt-1 text-[11px] tracking-[0.12em]
+                              uppercase transition-all duration-200 whitespace-nowrap shrink-0 border-b-2
+                              ${i === activeTab
+                                ? `font-semibold ${useKosmos ? 'border-[#1768B0] text-[#1768B0]' : 'border-[--accent] text-[--accent]'}`
+                                : 'font-normal border-transparent text-black/30 hover:text-black/50'
+                              }`}
+                >
+                  {col.name}
+                  <span className="ml-1.5 text-[10px] opacity-60">({col.products.length})</span>
+                </button>
+              ))}
+            </>
           )}
         </div>
       </div>
