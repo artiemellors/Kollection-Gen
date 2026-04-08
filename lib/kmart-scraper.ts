@@ -1,3 +1,8 @@
+const SEARCH_BASE = 'https://vaisc-search-api-nnsmv6as2a-ts.a.run.app/api/v1/search'
+const SEARCH_KEY = 'key_GZTqlLr41FS2p7AY'
+const BROWSE_BASE = 'https://ac.cnstrc.com'
+const BROWSE_KEY = 'key_GZTqlLr41FS2p7AY'
+
 export interface Product {
   name: string
   price: string
@@ -76,8 +81,8 @@ function mapProducts(candidates: Record<string, unknown>[]): Product[] {
 
 export async function fetchCollections(keywords: string[]): Promise<Collection[]> {
   const url =
-    `https://ac.cnstrc.com/browse/collections` +
-    `?key=key_GZTqlLr41FS2p7AY&c=ciojs-client-2.71.1&num_results_per_page=200`
+    `${BROWSE_BASE}/browse/collections` +
+    `?key=${BROWSE_KEY}&c=ciojs-client-2.71.1&num_results_per_page=200`
   const res = await fetch(url, { headers: { Accept: 'application/json' } })
   if (!res.ok) return []
   const json = await res.json() as Record<string, unknown>
@@ -93,8 +98,8 @@ export async function fetchCollections(keywords: string[]): Promise<Collection[]
 
 export async function browseCollection(collectionId: string): Promise<Product[]> {
   const url =
-    `https://ac.cnstrc.com/browse/collection_id/${encodeURIComponent(collectionId)}` +
-    `?key=key_GZTqlLr41FS2p7AY&c=ciojs-client-2.71.1&num_results_per_page=48`
+    `${BROWSE_BASE}/browse/collection_id/${encodeURIComponent(collectionId)}` +
+    `?key=${BROWSE_KEY}&c=ciojs-client-2.71.1&num_results_per_page=48`
   console.log(`\n[Collection] Browsing "${collectionId}"`)
   const res = await fetch(url, { headers: { Accept: 'application/json' } })
   if (!res.ok) {
@@ -110,8 +115,10 @@ export async function browseCollection(collectionId: string): Promise<Product[]>
 
 export async function searchKmart(query: string, categoryFilter = ''): Promise<Product[]> {
   const url =
-    `https://ac.cnstrc.com/search/${encodeURIComponent(query)}` +
-    `?key=key_GZTqlLr41FS2p7AY&c=ciojs-client-2.71.1&num_results_per_page=48` +
+    `${SEARCH_BASE}/${encodeURIComponent(query)}` +
+    `?num_results_per_page=48&page=1&sort_by=relevance&sort_order=descending` +
+    `&key=${SEARCH_KEY}` +
+    `&filters%5BSeller%5D=Kmart` +
     categoryFilter
   console.log(`\n[Search] ${query}`)
   const res = await fetch(url, { headers: { Accept: 'application/json' } })
