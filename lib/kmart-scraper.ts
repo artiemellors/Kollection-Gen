@@ -41,7 +41,7 @@ function mapProducts(candidates: Record<string, unknown>[]): Product[] {
     return true
   })
 
-  return deduplicated.slice(0, 48).map((item, i) => {
+  return deduplicated.slice(0, 100).map((item, i) => {
     const data = item.data as Record<string, unknown> | undefined
     const rawUrl = data?.url != null ? String(data.url)
       : item.url != null ? String(item.url)
@@ -126,7 +126,7 @@ export async function browseCollection(collectionId: string): Promise<Product[]>
 export async function searchKmart(query: string, categoryFilter = ''): Promise<Product[]> {
   const url =
     `${SEARCH_BASE}/${encodeURIComponent(query)}` +
-    `?num_results_per_page=48&page=1&sort_by=new&sort_order=descending` +
+    `?num_results_per_page=100&page=1&sort_by=new&sort_order=descending` +
     `&key=${SEARCH_KEY}` +
     `&filters%5BSeller%5D=Kmart` +
     categoryFilter

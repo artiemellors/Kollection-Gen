@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         const tools: Anthropic.Tool[] = [
           {
             name: 'search_kmart',
-            description: "Search Kmart Australia for products. Returns up to 48 products, each with an id, name, price, dataId, and colour.",
+            description: "Search Kmart Australia for products. Returns up to 100 products, each with an id, name, price, dataId, and colour.",
             input_schema: {
               type: 'object' as const,
               properties: { query: { type: 'string', description: "Search query, e.g. \"men's black t-shirt\"" } },
