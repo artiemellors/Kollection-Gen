@@ -97,9 +97,9 @@ const OUTFITS_CONFIG: CategoryConfig = {
 ${COLLECTION_PROMPT_SUFFIX}`,
   // filters[Category][]=Clothing, Activewear, Shoes
   categoryFilter:
-    '&filters%5BCategory%5D%5B%5D=Clothing' +
-    '&filters%5BCategory%5D%5B%5D=Activewear' +
-    '&filters%5BCategory%5D%5B%5D=Shoes',
+    '&filters%5BCategory%5D=Clothing' +
+    '&filters%5BCategory%5D=Activewear' +
+    '&filters%5BCategory%5D=Shoes',
   collectionKeywords: [
     'dress', 'shirt', 'pants', 'jacket', 'shoes', 'footwear', 'skirt', 'jeans',
     'shorts', 'blazer', 'tracksuit', 'leggings', 'swimwear', 'sleepwear', 'top',
@@ -187,21 +187,21 @@ ${COLLECTION_PROMPT_SUFFIX}`,
   //   Quilts, Coverlets & Comforters, Lighting, Vases, Decor Accessories, Wall Art,
   //   Candles & Home Fragrance, Artificial plants & flowers, Baskets, Curtains & Rods
   categoryFilter:
-    '&filters%5BCategory%5D%5B%5D=Cushions' +
-    '&filters%5BCategory%5D%5B%5D=Indoor%20Cushions' +
-    '&filters%5BCategory%5D%5B%5D=Rugs' +
-    '&filters%5BCategory%5D%5B%5D=Quilt%20Cover%20Sets' +
-    '&filters%5BCategory%5D%5B%5D=Sheeting' +
-    '&filters%5BCategory%5D%5B%5D=Quilts' +
-    '&filters%5BCategory%5D%5B%5D=Coverlets%20%26%20Comforters' +
-    '&filters%5BCategory%5D%5B%5D=Lighting' +
-    '&filters%5BCategory%5D%5B%5D=Vases' +
-    '&filters%5BCategory%5D%5B%5D=Decor%20Accessories' +
-    '&filters%5BCategory%5D%5B%5D=Wall%20Art' +
-    '&filters%5BCategory%5D%5B%5D=Candles%20%26%20Home%20Fragrance' +
-    '&filters%5BCategory%5D%5B%5D=Artificial%20plants%20%26%20flowers' +
-    '&filters%5BCategory%5D%5B%5D=Baskets' +
-    '&filters%5BCategory%5D%5B%5D=Curtains%20%26%20Rods',
+    '&filters%5BCategory%5D=Cushions' +
+    '&filters%5BCategory%5D=Indoor%20Cushions' +
+    '&filters%5BCategory%5D=Rugs' +
+    '&filters%5BCategory%5D=Quilt%20Cover%20Sets' +
+    '&filters%5BCategory%5D=Sheeting' +
+    '&filters%5BCategory%5D=Quilts' +
+    '&filters%5BCategory%5D=Coverlets%20%26%20Comforters' +
+    '&filters%5BCategory%5D=Lighting' +
+    '&filters%5BCategory%5D=Vases' +
+    '&filters%5BCategory%5D=Decor%20Accessories' +
+    '&filters%5BCategory%5D=Wall%20Art' +
+    '&filters%5BCategory%5D=Candles%20%26%20Home%20Fragrance' +
+    '&filters%5BCategory%5D=Artificial%20plants%20%26%20flowers' +
+    '&filters%5BCategory%5D=Baskets' +
+    '&filters%5BCategory%5D=Curtains%20%26%20Rods',
   collectionKeywords: [
     'cushion', 'rug', 'throw', 'linen', 'bedding', 'lighting', 'lamp', 'vase',
     'candle', 'frame', 'wall art', 'storage', 'basket', 'shelf', 'mirror', 'decor',
@@ -273,12 +273,12 @@ const KITCHEN_CONFIG: CategoryConfig = {
 ${COLLECTION_PROMPT_SUFFIX}`,
   // filters[Category][]=Cookware, Bakeware, Kitchen Appliances, Dinnerware, Serveware, Kitchen Storage
   categoryFilter:
-    '&filters%5BCategory%5D%5B%5D=Cookware' +
-    '&filters%5BCategory%5D%5B%5D=Bakeware' +
-    '&filters%5BCategory%5D%5B%5D=Kitchen%20Appliances' +
-    '&filters%5BCategory%5D%5B%5D=Dinnerware' +
-    '&filters%5BCategory%5D%5B%5D=Serveware' +
-    '&filters%5BCategory%5D%5B%5D=Kitchen%20Storage',
+    '&filters%5BCategory%5D=Cookware' +
+    '&filters%5BCategory%5D=Bakeware' +
+    '&filters%5BCategory%5D=Kitchen%20Appliances' +
+    '&filters%5BCategory%5D=Dinnerware' +
+    '&filters%5BCategory%5D=Serveware' +
+    '&filters%5BCategory%5D=Kitchen%20Storage',
   collectionKeywords: [
     'cookware', 'pan', 'pot', 'knife', 'cutting board', 'utensil', 'mug', 'cup',
     'plate', 'bowl', 'glass', 'bakeware', 'storage', 'container', 'appliance',
@@ -352,19 +352,19 @@ ${COLLECTION_PROMPT_SUFFIX}`,
   //   Party Favours & Glow, Table Decor, Loots Bags & Invites, Pretend Play & Dress Up,
   //   Kids Art, Craft & Stationery
   categoryFilter:
-    '&filters%5BCategory%5D%5B%5D=Balloons' +
-    '&filters%5BCategory%5D%5B%5D=Decorations' +
-    '&filters%5BCategory%5D%5B%5D=Candles%20%26%20Toppers' +
-    '&filters%5BCategory%5D%5B%5D=Party%20Plates%20%26%20Bowls' +
-    '&filters%5BCategory%5D%5B%5D=Party%20Napkins' +
-    '&filters%5BCategory%5D%5B%5D=Party%20Cups' +
-    '&filters%5BCategory%5D%5B%5D=Party%20Cutlery' +
-    '&filters%5BCategory%5D%5B%5D=Party%20Serveware%20%26%20Accessories' +
-    '&filters%5BCategory%5D%5B%5D=Party%20Favours%20%26%20Glow' +
-    '&filters%5BCategory%5D%5B%5D=Table%20Decor' +
-    '&filters%5BCategory%5D%5B%5D=Loots%20Bags%20%26%20Invites' +
-    '&filters%5BCategory%5D%5B%5D=Pretend%20Play%20%26%20Dress%20Up' +
-    '&filters%5BCategory%5D%5B%5D=Kids%20Art%2C%20Craft%20%26%20Stationery',
+    '&filters%5BCategory%5D=Balloons' +
+    '&filters%5BCategory%5D=Decorations' +
+    '&filters%5BCategory%5D=Candles%20%26%20Toppers' +
+    '&filters%5BCategory%5D=Party%20Plates%20%26%20Bowls' +
+    '&filters%5BCategory%5D=Party%20Napkins' +
+    '&filters%5BCategory%5D=Party%20Cups' +
+    '&filters%5BCategory%5D=Party%20Cutlery' +
+    '&filters%5BCategory%5D=Party%20Serveware%20%26%20Accessories' +
+    '&filters%5BCategory%5D=Party%20Favours%20%26%20Glow' +
+    '&filters%5BCategory%5D=Table%20Decor' +
+    '&filters%5BCategory%5D=Loots%20Bags%20%26%20Invites' +
+    '&filters%5BCategory%5D=Pretend%20Play%20%26%20Dress%20Up' +
+    '&filters%5BCategory%5D=Kids%20Art%2C%20Craft%20%26%20Stationery',
   collectionKeywords: [
     'party', 'balloon', 'decoration', 'tableware', 'plate', 'cup', 'napkin',
     'banner', 'streamer', 'confetti', 'costume', 'dress up', 'game', 'activity',
@@ -430,16 +430,16 @@ ${COLLECTION_PROMPT_SUFFIX}`,
   //   Party Plates & Bowls, Party Napkins, Party Cups, Party Serveware & Accessories,
   //   Kids Art, Craft & Stationery, Pretend Play & Dress Up
   categoryFilter:
-    '&filters%5BCategory%5D%5B%5D=Decorations' +
-    '&filters%5BCategory%5D%5B%5D=Table%20Decor' +
-    '&filters%5BCategory%5D%5B%5D=Candles%20%26%20Toppers' +
-    '&filters%5BCategory%5D%5B%5D=Balloons' +
-    '&filters%5BCategory%5D%5B%5D=Party%20Plates%20%26%20Bowls' +
-    '&filters%5BCategory%5D%5B%5D=Party%20Napkins' +
-    '&filters%5BCategory%5D%5B%5D=Party%20Cups' +
-    '&filters%5BCategory%5D%5B%5D=Party%20Serveware%20%26%20Accessories' +
-    '&filters%5BCategory%5D%5B%5D=Kids%20Art%2C%20Craft%20%26%20Stationery' +
-    '&filters%5BCategory%5D%5B%5D=Pretend%20Play%20%26%20Dress%20Up',
+    '&filters%5BCategory%5D=Decorations' +
+    '&filters%5BCategory%5D=Table%20Decor' +
+    '&filters%5BCategory%5D=Candles%20%26%20Toppers' +
+    '&filters%5BCategory%5D=Balloons' +
+    '&filters%5BCategory%5D=Party%20Plates%20%26%20Bowls' +
+    '&filters%5BCategory%5D=Party%20Napkins' +
+    '&filters%5BCategory%5D=Party%20Cups' +
+    '&filters%5BCategory%5D=Party%20Serveware%20%26%20Accessories' +
+    '&filters%5BCategory%5D=Kids%20Art%2C%20Craft%20%26%20Stationery' +
+    '&filters%5BCategory%5D=Pretend%20Play%20%26%20Dress%20Up',
   collectionKeywords: [
     'easter', 'egg', 'bunny', 'rabbit', 'seasonal', 'basket', 'hunt', 'pastel',
     'spring', 'chick', 'decoration', 'tableware', 'craft', 'activity',
