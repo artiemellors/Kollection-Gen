@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import {
   DndContext,
@@ -277,6 +277,7 @@ interface ProductCollectionsProps {
   onRemoveSelected: (collectionIndex: number, productIndices: Set<number>) => void
   onReorder: (collectionIndex: number, fromIndex: number, toIndex: number) => void
   onMoveProduct: (fromCollection: number, fromIndex: number, toCollection: number, toIndex: number) => void
+  onAddToCollection: (fromCollectionIndex: number, productIndices: Set<number>, toCollectionIndex: number) => void
 }
 
 // Wrapper that makes a product card sortable via dnd-kit
@@ -312,10 +313,24 @@ function SortableProductCard({
   )
 }
 
-export function ProductCollections({ collections, onRemoveProduct, onRemoveSelected, onReorder, onMoveProduct }: ProductCollectionsProps) {
+export function ProductCollections({ collections, onRemoveProduct, onRemoveSelected, onReorder, onMoveProduct, onAddToCollection }: ProductCollectionsProps) {
   const [activeTab, setActiveTab] = useState(-1)  // -1 = "All" tab
   const [selected, setSelected] = useState<Map<number, Set<number>>>(new Map())
   const [activeSellers, setActiveSellers] = useState<Set<Seller>>(new Set(SELLERS))
+  const [showAddTo, setShowAddTo] = useState(false)
+  const addToRef = useRef<HTMLDivElement>(null)
+
+  // Close "Move to" dropdown on outside click
+  useEffect(() => {
+    if (!showAddTo) return
+    const handler = (e: MouseEvent) => {
+      if (addToRef.current && !addToRef.current.contains(e.target as Node)) {
+        setShowAddTo(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showAddTo])
   const isLoading = collections === null
 
   // Reset active tab when collections change
@@ -487,6 +502,45 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
     exportToExcel(dataIds, `${filename}-selected`)
   }, [activeCollection, activeSelected])
 
+  // Move selected products to a target collection
+  const handleAddTo = useCallback((targetCollectionIndex: number) => {
+    if (!collections || !activeCollection || selectedCount === 0) return
+    const filteredProducts = activeCollection.products
+
+    if (activeTab === -1) {
+      // "All" tab: group selected products by source collection
+      const removals = new Map<number, Set<number>>()
+      for (const displayIndex of activeSelected) {
+        const product = filteredProducts[displayIndex]
+        if (!product) continue
+        for (let ci = 0; ci < collections.length; ci++) {
+          const pi = collections[ci].products.indexOf(product)
+          if (pi !== -1) {
+            if (!removals.has(ci)) removals.set(ci, new Set())
+            removals.get(ci)!.add(pi)
+            break
+          }
+        }
+      }
+      for (const [ci, indices] of removals) {
+        if (ci !== targetCollectionIndex) {
+          onAddToCollection(ci, indices, targetCollectionIndex)
+        }
+      }
+    } else if (activeTab !== targetCollectionIndex) {
+      const realIndices = new Set<number>()
+      for (const displayIndex of activeSelected) {
+        const product = filteredProducts[displayIndex]
+        if (!product) continue
+        const realIndex = collections[activeTab].products.indexOf(product)
+        if (realIndex !== -1) realIndices.add(realIndex)
+      }
+      onAddToCollection(activeTab, realIndices, targetCollectionIndex)
+    }
+    setSelected(prev => { const next = new Map(prev); next.delete(activeTab); return next })
+    setShowAddTo(false)
+  }, [collections, activeCollection, activeTab, activeSelected, selectedCount, onAddToCollection])
+
   // Drag-and-drop — require 5px movement before starting drag to avoid
   // interfering with click-to-select
   const sensors = useSensors(
@@ -572,6 +626,37 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
                 <i className="fa-solid fa-trash-can text-[10px]" />
                 Remove ({selectedCount})
               </button>
+            )}
+            {selectedCount > 0 && collections && collections.length > 1 && (
+              <div className="relative" ref={addToRef}>
+                <button
+                  onClick={() => setShowAddTo(prev => !prev)}
+                  className="text-[11px] font-semibold tracking-[0.12em] uppercase
+                             transition-all flex items-center gap-1.5
+                             text-[rgba(26,26,26,0.4)] hover:text-[rgba(26,26,26,0.7)]"
+                >
+                  <i className="fa-solid fa-arrow-right text-[10px]" />
+                  Move to
+                </button>
+                {showAddTo && (
+                  <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-black/[0.08] py-1 z-20 min-w-[160px]">
+                    {collections.map((col, ci) => {
+                      const isCurrent = ci === activeTab
+                      if (isCurrent) return null
+                      return (
+                        <button
+                          key={ci}
+                          onClick={() => handleAddTo(ci)}
+                          className="w-full text-left px-3 py-2 text-[12px] text-[#1a1a1a]
+                                     hover:bg-[rgba(23,104,176,0.06)] transition-colors"
+                        >
+                          {col.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )}
             {selectedCount > 0 && (
               <button

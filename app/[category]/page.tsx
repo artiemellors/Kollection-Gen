@@ -201,6 +201,49 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
   async function runSearch(q: string) {
     if (!q.trim()) return
     setQuery(q)
+
+    // If collections already exist, run a fast follow-up search (no Claude)
+    if (collections && collections.length > 0) {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: q, gender, category: categorySlug }),
+        })
+        const { products } = await res.json() as { products: ProductCollection['products'] }
+        if (products.length > 0) {
+          // Deduplicate: exclude products already in existing collections
+          const existingIds = new Set(
+            collections.flatMap(col => col.products.map(p => p.dataId).filter(Boolean))
+          )
+          const newProducts = products.filter(p => !p.dataId || !existingIds.has(p.dataId))
+          if (newProducts.length > 0) {
+            setCollections(prev => {
+              if (!prev) return prev
+              // Append to existing Ungrouped or create new one
+              const ungroupedIdx = prev.findIndex(c => c.name === 'Ungrouped')
+              if (ungroupedIdx !== -1) {
+                return prev.map((col, i) =>
+                  i === ungroupedIdx
+                    ? { ...col, products: [...col.products, ...newProducts] }
+                    : col
+                )
+              }
+              return [...prev, { name: 'Ungrouped', products: newProducts }]
+            })
+          }
+        }
+      } catch (err) {
+        setError(String(err))
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
+    // First search: full Claude-powered collection generation
     setLoading(true)
     setStatuses([])
     setCollections(null)
@@ -285,6 +328,24 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
       const next = prev.map(col => ({ ...col, products: [...col.products] }))
       const [moved] = next[fromCollection].products.splice(fromIndex, 1)
       next[toCollection].products.splice(toIndex, 0, moved)
+      return next.filter(col => col.products.length > 0)
+    })
+  }, [])
+
+  // Move selected products from one collection into a target collection
+  const handleAddToCollection = useCallback((
+    fromCollectionIndex: number,
+    productIndices: Set<number>,
+    toCollectionIndex: number
+  ) => {
+    setCollections(prev => {
+      if (!prev) return prev
+      const next = prev.map(col => ({ ...col, products: [...col.products] }))
+      // Extract selected products from source
+      const moving = next[fromCollectionIndex].products.filter((_, i) => productIndices.has(i))
+      next[fromCollectionIndex].products = next[fromCollectionIndex].products.filter((_, i) => !productIndices.has(i))
+      // Append to target
+      next[toCollectionIndex].products.push(...moving)
       return next.filter(col => col.products.length > 0)
     })
   }, [])
@@ -543,6 +604,7 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
           onRemoveSelected={handleRemoveSelected}
           onReorder={handleReorder}
           onMoveProduct={handleMoveProduct}
+          onAddToCollection={handleAddToCollection}
         />
       )}
     </div>
