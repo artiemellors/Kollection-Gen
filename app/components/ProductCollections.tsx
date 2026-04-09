@@ -2,6 +2,20 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import * as XLSX from 'xlsx'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 const useKosmos = process.env.NEXT_PUBLIC_SHOW_NEW_FEATURE === 'true'
 
@@ -261,9 +275,43 @@ interface ProductCollectionsProps {
   collections: ProductCollection[] | null
   onRemoveProduct: (collectionIndex: number, productIndex: number) => void
   onRemoveSelected: (collectionIndex: number, productIndices: Set<number>) => void
+  onReorder: (collectionIndex: number, fromIndex: number, toIndex: number) => void
 }
 
-export function ProductCollections({ collections, onRemoveProduct, onRemoveSelected }: ProductCollectionsProps) {
+// Wrapper that makes a product card sortable via dnd-kit
+function SortableProductCard({
+  id,
+  children,
+  disabled,
+}: {
+  id: string
+  children: React.ReactNode
+  disabled: boolean
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 20 : undefined,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {children}
+    </div>
+  )
+}
+
+export function ProductCollections({ collections, onRemoveProduct, onRemoveSelected, onReorder }: ProductCollectionsProps) {
   const [activeTab, setActiveTab] = useState(-1)  // -1 = "All" tab
   const [selected, setSelected] = useState<Map<number, Set<number>>>(new Map())
   const [activeSellers, setActiveSellers] = useState<Set<Seller>>(new Set(SELLERS))
@@ -438,6 +486,36 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
     exportToExcel(dataIds, `${filename}-selected`)
   }, [activeCollection, activeSelected])
 
+  // Drag-and-drop — require 5px movement before starting drag to avoid
+  // interfering with click-to-select
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  )
+
+  const canReorder = activeTab >= 0 // disabled on "All" tab
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    if (!canReorder || !collections || !activeCollection) return
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const filteredProducts = activeCollection.products
+    const fromFiltered = filteredProducts.findIndex((_, i) => `product-${i}` === active.id)
+    const toFiltered = filteredProducts.findIndex((_, i) => `product-${i}` === over.id)
+    if (fromFiltered === -1 || toFiltered === -1) return
+
+    // Map filtered indices back to real indices in the source collection
+    const fromProduct = filteredProducts[fromFiltered]
+    const toProduct = filteredProducts[toFiltered]
+    const realFrom = collections[activeTab].products.indexOf(fromProduct)
+    const realTo = collections[activeTab].products.indexOf(toProduct)
+    if (realFrom === -1 || realTo === -1) return
+
+    onReorder(activeTab, realFrom, realTo)
+    // Clear selections since indices shift
+    setSelected(prev => { const next = new Map(prev); next.delete(activeTab); return next })
+  }, [canReorder, collections, activeCollection, activeTab, onReorder])
+
   if (!isLoading && collections.length === 0) return null
 
   return (
@@ -562,36 +640,44 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
       </div>
 
       {/* Product grid */}
-      <div
-        id="ProductCollections-grid"
-        className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 ${useKosmos ? 'gap-x-4 gap-y-6' : 'gap-x-4 gap-y-3'}`}
-      >
-        {isLoading ? (
-          Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
-        ) : activeCollection ? (
-          activeCollection.products.map((p, i) => (
-            useKosmos ? (
-              <KmartProductCard
-                key={`${activeTab}-${p.dataId ?? i}`}
-                p={p}
-                animDelay={i * 35}
-                isSelected={activeSelected.has(i)}
-                onToggleSelect={() => toggleSelect(i)}
-                onRemove={() => handleRemove(i)}
-              />
-            ) : (
-              <OriginalProductCard
-                key={`${activeTab}-${p.dataId ?? i}`}
-                p={p}
-                animDelay={i * 35}
-                isSelected={activeSelected.has(i)}
-                onToggleSelect={() => toggleSelect(i)}
-                onRemove={() => handleRemove(i)}
-              />
-            )
-          ))
-        ) : null}
-      </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext
+          items={activeCollection ? activeCollection.products.map((_, i) => `product-${i}`) : []}
+          strategy={rectSortingStrategy}
+          disabled={!canReorder}
+        >
+          <div
+            id="ProductCollections-grid"
+            className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 ${useKosmos ? 'gap-x-4 gap-y-6' : 'gap-x-4 gap-y-3'}`}
+          >
+            {isLoading ? (
+              Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
+            ) : activeCollection ? (
+              activeCollection.products.map((p, i) => (
+                <SortableProductCard key={`${activeTab}-${p.dataId ?? i}`} id={`product-${i}`} disabled={!canReorder}>
+                  {useKosmos ? (
+                    <KmartProductCard
+                      p={p}
+                      animDelay={i * 35}
+                      isSelected={activeSelected.has(i)}
+                      onToggleSelect={() => toggleSelect(i)}
+                      onRemove={() => handleRemove(i)}
+                    />
+                  ) : (
+                    <OriginalProductCard
+                      p={p}
+                      animDelay={i * 35}
+                      isSelected={activeSelected.has(i)}
+                      onToggleSelect={() => toggleSelect(i)}
+                      onRemove={() => handleRemove(i)}
+                    />
+                  )}
+                </SortableProductCard>
+              ))
+            ) : null}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
 
     </div>

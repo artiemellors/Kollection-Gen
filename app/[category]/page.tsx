@@ -262,6 +262,19 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
     })
   }, [])
 
+  const handleReorder = useCallback((collectionIndex: number, fromIndex: number, toIndex: number) => {
+    setCollections(prev => {
+      if (!prev) return prev
+      return prev.map((col, ci) => {
+        if (ci !== collectionIndex) return col
+        const products = [...col.products]
+        const [moved] = products.splice(fromIndex, 1)
+        products.splice(toIndex, 0, moved)
+        return { ...col, products }
+      })
+    })
+  }, [])
+
   const hasResults = collections !== null && collections.length > 0
 
   return (
@@ -514,6 +527,7 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
           collections={collections}
           onRemoveProduct={handleRemoveProduct}
           onRemoveSelected={handleRemoveSelected}
+          onReorder={handleReorder}
         />
       )}
     </div>
