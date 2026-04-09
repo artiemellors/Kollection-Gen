@@ -11,6 +11,45 @@ import {
   type CategoryConfig,
 } from '@/lib/category-config'
 
+// ─── Saved collection types ──────────────────────────────────────────────────
+
+interface SavedSession {
+  id: string
+  name: string
+  query: string
+  category: string
+  collections: ProductCollection[]
+  savedAt: number
+}
+
+const STORAGE_KEY = 'kollection-gen-saved'
+
+function loadSavedSessions(): SavedSession[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) as SavedSession[] : []
+  } catch { return [] }
+}
+
+function saveSessions(sessions: SavedSession[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions))
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return date.toLocaleDateString()
+}
+
 // ─── Typewriter placeholder ───────────────────────────────────────────────────
 
 function useTypewriterPlaceholder(examples: string[], paused: boolean) {
@@ -177,6 +216,38 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
   const [gender, setGender]       = useState<Gender>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [focused, setFocused]     = useState(false)
+  const [savedSessions, setSavedSessions] = useState<SavedSession[]>([])
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Load saved sessions on mount
+  useEffect(() => {
+    setSavedSessions(loadSavedSessions())
+  }, [])
+
+  // Auto-save: debounce 2s after any collection mutation
+  useEffect(() => {
+    if (!collections || collections.length === 0 || !query) return
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(() => {
+      setSavedSessions(prev => {
+        const sessionId = activeSessionId ?? crypto.randomUUID()
+        if (!activeSessionId) setActiveSessionId(sessionId)
+        const session: SavedSession = {
+          id: sessionId,
+          name: query,
+          query,
+          category: categorySlug,
+          collections,
+          savedAt: Date.now(),
+        }
+        const next = [session, ...prev.filter(s => s.id !== sessionId)].slice(0, 20)
+        saveSessions(next)
+        return next
+      })
+    }, 2000)
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  }, [collections]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const typewriter = useTypewriterPlaceholder(
     config.exampleQueries,
@@ -348,6 +419,35 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
       next[toCollectionIndex].products.push(...moving)
       return next.filter(col => col.products.length > 0)
     })
+  }, [])
+
+  // Load a saved session
+  const handleLoadSession = useCallback((session: SavedSession) => {
+    setQuery(session.query)
+    setCollections(session.collections)
+    setActiveSessionId(session.id)
+    setRefinements(null)
+    setError(null)
+  }, [])
+
+  // Delete a saved session
+  const handleDeleteSession = useCallback((sessionId: string) => {
+    setSavedSessions(prev => {
+      const next = prev.filter(s => s.id !== sessionId)
+      saveSessions(next)
+      return next
+    })
+    if (activeSessionId === sessionId) setActiveSessionId(null)
+  }, [activeSessionId])
+
+  // Start fresh (clear current session)
+  const handleNewSession = useCallback(() => {
+    setQuery('')
+    setCollections(null)
+    setRefinements(null)
+    setActiveSessionId(null)
+    setError(null)
+    setStatuses([])
   }, [])
 
   const hasResults = collections !== null && collections.length > 0
@@ -579,6 +679,64 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Recent Collections — empty state only */}
+        {!loading && !hasResults && savedSessions.length > 0 && (
+          <div className="mt-10" style={{ animation: 'fadeUp 0.5s 0.35s ease both', opacity: 0 }}>
+            <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[rgba(26,26,26,0.35)] mb-3">
+              Recent Collections
+            </p>
+            <div className="flex flex-col gap-2">
+              {savedSessions
+                .filter(s => s.category === categorySlug)
+                .slice(0, 5)
+                .map(session => {
+                  const productCount = session.collections.reduce((sum, c) => sum + c.products.length, 0)
+                  const date = new Date(session.savedAt)
+                  const timeAgo = formatTimeAgo(date)
+                  return (
+                    <div
+                      key={session.id}
+                      className="flex items-center gap-3 px-4 py-3 bg-white rounded-lg border border-black/[0.06]
+                                 hover:border-black/[0.12] transition-all cursor-pointer group"
+                      onClick={() => handleLoadSession(session)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] text-[#1a1a1a] truncate">{session.name}</p>
+                        <p className="text-[11px] text-[rgba(26,26,26,0.4)]">
+                          {session.collections.length} collection{session.collections.length !== 1 ? 's' : ''}
+                          {' · '}{productCount} product{productCount !== 1 ? 's' : ''}
+                          {' · '}{timeAgo}
+                        </p>
+                      </div>
+                      <button
+                        onClick={e => { e.stopPropagation(); handleDeleteSession(session.id) }}
+                        className="text-[rgba(26,26,26,0.2)] hover:text-red-400 transition-colors
+                                   opacity-0 group-hover:opacity-100 shrink-0 p-1"
+                      >
+                        <i className="fa-solid fa-trash-can text-[11px]" />
+                      </button>
+                    </div>
+                  )
+                })}
+            </div>
+          </div>
+        )}
+
+        {/* New Collection button — shown when results exist */}
+        {hasResults && (
+          <div className="mt-4">
+            <button
+              onClick={handleNewSession}
+              className="text-[11px] font-semibold tracking-[0.12em] uppercase
+                         text-[rgba(26,26,26,0.4)] hover:text-[rgba(26,26,26,0.7)] transition-all
+                         flex items-center gap-1.5"
+            >
+              <i className="fa-solid fa-plus text-[10px]" />
+              New Collection
+            </button>
           </div>
         )}
 
