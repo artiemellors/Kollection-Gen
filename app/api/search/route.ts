@@ -2,17 +2,7 @@ import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { searchKmart, browseCollection, fetchCollections, Product } from '@/lib/kmart-scraper'
 import { getCategoryConfig } from '@/lib/category-config'
-
-// Keyword-based gender filter applied at the data layer as a backstop.
-// Kmart product names reliably contain gendered terms we can check against.
-const WOMENS_TERMS = /\b(women'?s?|ladies|girl'?s?|feminine|womens)\b/i
-const MENS_TERMS   = /\b(men'?s?|guy'?s?|boys?|masculine|mens)\b/i
-
-function filterByGender(products: Product[], gender: 'men' | 'women' | null): Product[] {
-  if (!gender) return products
-  const excludePattern = gender === 'men' ? WOMENS_TERMS : MENS_TERMS
-  return products.filter(p => !excludePattern.test(p.name))
-}
+import { filterByGender } from '@/lib/gender-filter'
 
 export async function POST(req: NextRequest) {
   const { query, gender, category } = await req.json() as {

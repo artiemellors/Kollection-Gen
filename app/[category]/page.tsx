@@ -226,28 +226,35 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
   }, [])
 
   // Auto-save: debounce 2s after any collection mutation
+  const activeSessionIdRef = useRef(activeSessionId)
+  activeSessionIdRef.current = activeSessionId
+  const queryRef = useRef(query)
+  queryRef.current = query
+
   useEffect(() => {
-    if (!collections || collections.length === 0 || !query) return
+    if (!collections || collections.length === 0) return
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
     autoSaveTimer.current = setTimeout(() => {
+      const currentQuery = queryRef.current
+      if (!currentQuery) return
+      const sessionId = activeSessionIdRef.current ?? crypto.randomUUID()
+      if (!activeSessionIdRef.current) setActiveSessionId(sessionId)
+      const session: SavedSession = {
+        id: sessionId,
+        name: currentQuery,
+        query: currentQuery,
+        category: categorySlug,
+        collections,
+        savedAt: Date.now(),
+      }
       setSavedSessions(prev => {
-        const sessionId = activeSessionId ?? crypto.randomUUID()
-        if (!activeSessionId) setActiveSessionId(sessionId)
-        const session: SavedSession = {
-          id: sessionId,
-          name: query,
-          query,
-          category: categorySlug,
-          collections,
-          savedAt: Date.now(),
-        }
         const next = [session, ...prev.filter(s => s.id !== sessionId)].slice(0, 20)
         saveSessions(next)
         return next
       })
     }, 2000)
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
-  }, [collections]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [collections, categorySlug])
 
   const typewriter = useTypewriterPlaceholder(
     config.exampleQueries,

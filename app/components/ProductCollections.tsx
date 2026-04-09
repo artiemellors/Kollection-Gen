@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import * as XLSX from 'xlsx'
 import {
   DndContext,
@@ -284,11 +284,9 @@ interface ProductCollectionsProps {
 function SortableProductCard({
   id,
   children,
-  disabled,
 }: {
   id: string
   children: React.ReactNode
-  disabled: boolean
 }) {
   const {
     attributes,
@@ -297,7 +295,7 @@ function SortableProductCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id, disabled })
+  } = useSortable({ id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -364,14 +362,15 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
     return products.filter(p => !p.seller || activeSellers.has(p.seller as Seller))
   }, [activeSellers])
 
-  // Compute the "All" virtual collection (before seller filtering)
-  const allCollection: ProductCollection | null = isLoading ? null : {
-    name: 'All',
-    products: collections.flatMap(col => col.products),
-  }
+  const allCollection = useMemo<ProductCollection | null>(() => {
+    if (isLoading) return null
+    return { name: 'All', products: collections.flatMap(col => col.products) }
+  }, [isLoading, collections])
 
-  const rawCollection = isLoading ? null : activeTab === -1 ? allCollection : collections[activeTab]
-  const activeCollection = rawCollection ? { ...rawCollection, products: filterBySeller(rawCollection.products) } : null
+  const activeCollection = useMemo<ProductCollection | null>(() => {
+    const raw = isLoading ? null : activeTab === -1 ? allCollection : collections[activeTab]
+    return raw ? { ...raw, products: filterBySeller(raw.products) } : null
+  }, [isLoading, collections, activeTab, allCollection, filterBySeller])
   const activeSelected = selected.get(activeTab) ?? new Set<number>()
   const selectedCount = activeSelected.size
 
@@ -406,80 +405,66 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
     })
   }, [activeTab])
 
-  // Remove a single product — resolve "All" tab index to source collection
+  const clearTabSelection = useCallback(() => {
+    setSelected(prev => { const next = new Map(prev); next.delete(activeTab); return next })
+  }, [activeTab])
+
+  const findSourceProduct = useCallback((product: CollectionProduct): { ci: number; pi: number } | null => {
+    if (!collections) return null
+    for (let ci = 0; ci < collections.length; ci++) {
+      const pi = collections[ci].products.indexOf(product)
+      if (pi !== -1) return { ci, pi }
+    }
+    return null
+  }, [collections])
+
   const handleRemove = useCallback((displayIndex: number) => {
     if (!collections || !activeCollection) return
+    const product = activeCollection.products[displayIndex]
+    if (!product) return
     if (activeTab === -1) {
-      // "All" tab: trace back to the source collection
-      const filteredProducts = activeCollection.products
-      const product = filteredProducts[displayIndex]
-      if (!product) return
-      let offset = 0
-      for (let ci = 0; ci < collections.length; ci++) {
-        const colProducts = filterBySeller(collections[ci].products)
-        const localIndex = colProducts.indexOf(product)
-        if (localIndex !== -1) {
-          // Find the real index in the unfiltered collection
-          const realIndex = collections[ci].products.indexOf(product)
-          if (realIndex !== -1) {
-            onRemoveProduct(ci, realIndex)
-            // Clear selection for All tab since indices shift
-            setSelected(prev => { const next = new Map(prev); next.delete(-1); return next })
-            return
-          }
-        }
-        offset += colProducts.length
-      }
+      const source = findSourceProduct(product)
+      if (source) onRemoveProduct(source.ci, source.pi)
     } else {
-      // Specific collection tab: map filtered index back to real index
-      const filteredProducts = activeCollection.products
-      const product = filteredProducts[displayIndex]
-      if (!product) return
       const realIndex = collections[activeTab].products.indexOf(product)
-      if (realIndex !== -1) {
-        onRemoveProduct(activeTab, realIndex)
-        setSelected(prev => { const next = new Map(prev); next.delete(activeTab); return next })
-      }
+      if (realIndex !== -1) onRemoveProduct(activeTab, realIndex)
     }
-  }, [collections, activeCollection, activeTab, filterBySeller, onRemoveProduct])
+    clearTabSelection()
+  }, [collections, activeCollection, activeTab, findSourceProduct, onRemoveProduct, clearTabSelection])
 
-  // Remove selected products
-  const handleRemoveSelectedProducts = useCallback(() => {
-    if (!collections || !activeCollection || selectedCount === 0) return
+  // Resolve a set of display indices to { collectionIndex → Set<realIndex> }
+  const resolveSelectedToSource = useCallback((displayIndices: Set<number>): Map<number, Set<number>> => {
+    if (!collections || !activeCollection) return new Map()
     const filteredProducts = activeCollection.products
-
-    if (activeTab === -1) {
-      // "All" tab: group selected products by their source collection
-      const removals = new Map<number, Set<number>>()
-      for (const displayIndex of activeSelected) {
-        const product = filteredProducts[displayIndex]
-        if (!product) continue
-        for (let ci = 0; ci < collections.length; ci++) {
-          const realIndex = collections[ci].products.indexOf(product)
-          if (realIndex !== -1) {
-            if (!removals.has(ci)) removals.set(ci, new Set())
-            removals.get(ci)!.add(realIndex)
-            break
-          }
+    const result = new Map<number, Set<number>>()
+    for (const di of displayIndices) {
+      const product = filteredProducts[di]
+      if (!product) continue
+      if (activeTab === -1) {
+        const source = findSourceProduct(product)
+        if (source) {
+          if (!result.has(source.ci)) result.set(source.ci, new Set())
+          result.get(source.ci)!.add(source.pi)
+        }
+      } else {
+        const realIndex = collections[activeTab].products.indexOf(product)
+        if (realIndex !== -1) {
+          if (!result.has(activeTab)) result.set(activeTab, new Set())
+          result.get(activeTab)!.add(realIndex)
         }
       }
-      // Remove from each collection (process in reverse order so indices don't shift)
-      for (const [ci, indices] of removals) {
-        onRemoveSelected(ci, indices)
-      }
-    } else {
-      // Specific collection: map filtered indices to real indices
-      const realIndices = new Set<number>()
-      for (const displayIndex of activeSelected) {
-        const product = filteredProducts[displayIndex]
-        if (!product) continue
-        const realIndex = collections[activeTab].products.indexOf(product)
-        if (realIndex !== -1) realIndices.add(realIndex)
-      }
-      onRemoveSelected(activeTab, realIndices)
     }
-    setSelected(prev => { const next = new Map(prev); next.delete(activeTab); return next })
-  }, [collections, activeCollection, activeTab, activeSelected, selectedCount, filterBySeller, onRemoveSelected])
+    return result
+  }, [collections, activeCollection, activeTab, findSourceProduct])
+
+  const handleRemoveSelectedProducts = useCallback(() => {
+    if (selectedCount === 0) return
+    const resolved = resolveSelectedToSource(activeSelected)
+    for (const [ci, indices] of resolved) {
+      onRemoveSelected(ci, indices)
+    }
+    clearTabSelection()
+  }, [selectedCount, activeSelected, resolveSelectedToSource, onRemoveSelected, clearTabSelection])
 
   const handleExportAll = useCallback(() => {
     if (!activeCollection) return
@@ -504,58 +489,22 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
 
   // Move selected products to a target collection
   const handleAddTo = useCallback((targetCollectionIndex: number) => {
-    if (!collections || !activeCollection || selectedCount === 0) return
-    const filteredProducts = activeCollection.products
-
-    if (activeTab === -1) {
-      // "All" tab: group selected products by source collection
-      const removals = new Map<number, Set<number>>()
-      for (const displayIndex of activeSelected) {
-        const product = filteredProducts[displayIndex]
-        if (!product) continue
-        for (let ci = 0; ci < collections.length; ci++) {
-          const pi = collections[ci].products.indexOf(product)
-          if (pi !== -1) {
-            if (!removals.has(ci)) removals.set(ci, new Set())
-            removals.get(ci)!.add(pi)
-            break
-          }
-        }
+    if (selectedCount === 0) return
+    const resolved = resolveSelectedToSource(activeSelected)
+    for (const [ci, indices] of resolved) {
+      if (ci !== targetCollectionIndex) {
+        onAddToCollection(ci, indices, targetCollectionIndex)
       }
-      for (const [ci, indices] of removals) {
-        if (ci !== targetCollectionIndex) {
-          onAddToCollection(ci, indices, targetCollectionIndex)
-        }
-      }
-    } else if (activeTab !== targetCollectionIndex) {
-      const realIndices = new Set<number>()
-      for (const displayIndex of activeSelected) {
-        const product = filteredProducts[displayIndex]
-        if (!product) continue
-        const realIndex = collections[activeTab].products.indexOf(product)
-        if (realIndex !== -1) realIndices.add(realIndex)
-      }
-      onAddToCollection(activeTab, realIndices, targetCollectionIndex)
     }
-    setSelected(prev => { const next = new Map(prev); next.delete(activeTab); return next })
+    clearTabSelection()
     setShowAddTo(false)
-  }, [collections, activeCollection, activeTab, activeSelected, selectedCount, onAddToCollection])
+  }, [selectedCount, activeSelected, resolveSelectedToSource, onAddToCollection, clearTabSelection])
 
   // Drag-and-drop — require 5px movement before starting drag to avoid
   // interfering with click-to-select
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
-
-  // Helper: find which source collection a product belongs to and its real index
-  const findSourceProduct = useCallback((product: CollectionProduct): { ci: number; pi: number } | null => {
-    if (!collections) return null
-    for (let ci = 0; ci < collections.length; ci++) {
-      const pi = collections[ci].products.indexOf(product)
-      if (pi !== -1) return { ci, pi }
-    }
-    return null
-  }, [collections])
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     if (!collections || !activeCollection) return
@@ -591,7 +540,7 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
       onReorder(activeTab, realFrom, realTo)
     }
 
-    setSelected(prev => { const next = new Map(prev); next.delete(activeTab); return next })
+    clearTabSelection()
   }, [collections, activeCollection, activeTab, findSourceProduct, onReorder, onMoveProduct])
 
   if (!isLoading && collections.length === 0) return null
@@ -753,7 +702,6 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
         <SortableContext
           items={activeCollection ? activeCollection.products.map((_, i) => `product-${i}`) : []}
           strategy={rectSortingStrategy}
-          disabled={false}
         >
           <div
             id="ProductCollections-grid"
@@ -763,7 +711,7 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
               Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
             ) : activeCollection ? (
               activeCollection.products.map((p, i) => (
-                <SortableProductCard key={`${activeTab}-${p.dataId ?? i}`} id={`product-${i}`} disabled={false}>
+                <SortableProductCard key={`${activeTab}-${p.dataId ?? i}`} id={`product-${i}`} >
                   {useKosmos ? (
                     <KmartProductCard
                       p={p}
