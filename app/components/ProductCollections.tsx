@@ -652,7 +652,7 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
                             }`}
               >
                 All
-                <span className="ml-1.5 text-[10px] opacity-60">({allCollection?.products.length ?? 0})</span>
+                <span className="ml-1.5 text-[10px] opacity-60">({filterBySeller(allCollection?.products ?? []).length})</span>
               </button>
               {collections.map((col, i) => (
                 <button
@@ -666,7 +666,7 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
                               }`}
                 >
                   {col.name}
-                  <span className="ml-1.5 text-[10px] opacity-60">({col.products.length})</span>
+                  <span className="ml-1.5 text-[10px] opacity-60">({filterBySeller(col.products).length})</span>
                 </button>
               ))}
             </>
@@ -711,7 +711,7 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
               Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
             ) : activeCollection ? (
               activeCollection.products.map((p, i) => (
-                <SortableProductCard key={`${activeTab}-${p.dataId ?? i}`} id={`product-${i}`} >
+                <SortableProductCard key={`${activeTab}-${i}`} id={`product-${i}`} >
                   {useKosmos ? (
                     <KmartProductCard
                       p={p}
