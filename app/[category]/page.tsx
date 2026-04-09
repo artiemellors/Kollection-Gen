@@ -580,7 +580,9 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
             onChange={e => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            placeholder={focused ? config.searchPlaceholder : typewriter}
+            placeholder={hasResults
+              ? 'Search to add more products...'
+              : focused ? config.searchPlaceholder : typewriter}
             disabled={loading}
             className="flex-1 min-w-0 bg-transparent border-none outline-none px-6 py-[18px]
                        text-[#1a1a1a] placeholder:text-[rgba(26,26,26,0.35)]
@@ -623,7 +625,7 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
                          disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: '#1768B0' }}
             >
-              <i className={`fa-solid fa-wand-magic-sparkles text-[15px]${loading ? ' animate-search-rock' : ''}`} />
+              <i className={`fa-solid ${hasResults ? 'fa-plus' : 'fa-wand-magic-sparkles'} text-[15px]${loading ? ' animate-search-rock' : ''}`} />
             </button>
           ) : (
             <button
@@ -636,8 +638,8 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
                          flex items-center gap-2"
               style={{ background: 'var(--accent)' }}
             >
-              <i className={`fa-solid fa-wand-magic-sparkles${loading ? ' animate-search-rock' : ''}`} />
-              <span className="hidden sm:inline">Search</span>
+              <i className={`fa-solid ${hasResults ? 'fa-plus' : 'fa-wand-magic-sparkles'}${loading ? ' animate-search-rock' : ''}`} />
+              <span className="hidden sm:inline">{hasResults ? 'Add' : 'Search'}</span>
             </button>
           )}
         </form>
