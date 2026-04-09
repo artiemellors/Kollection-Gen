@@ -275,6 +275,20 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
     })
   }, [])
 
+  // Move a product from one collection to another (used by All tab reorder)
+  const handleMoveProduct = useCallback((
+    fromCollection: number, fromIndex: number,
+    toCollection: number, toIndex: number
+  ) => {
+    setCollections(prev => {
+      if (!prev) return prev
+      const next = prev.map(col => ({ ...col, products: [...col.products] }))
+      const [moved] = next[fromCollection].products.splice(fromIndex, 1)
+      next[toCollection].products.splice(toIndex, 0, moved)
+      return next.filter(col => col.products.length > 0)
+    })
+  }, [])
+
   const hasResults = collections !== null && collections.length > 0
 
   return (
@@ -528,6 +542,7 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
           onRemoveProduct={handleRemoveProduct}
           onRemoveSelected={handleRemoveSelected}
           onReorder={handleReorder}
+          onMoveProduct={handleMoveProduct}
         />
       )}
     </div>

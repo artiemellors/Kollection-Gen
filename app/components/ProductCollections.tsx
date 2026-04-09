@@ -276,6 +276,7 @@ interface ProductCollectionsProps {
   onRemoveProduct: (collectionIndex: number, productIndex: number) => void
   onRemoveSelected: (collectionIndex: number, productIndices: Set<number>) => void
   onReorder: (collectionIndex: number, fromIndex: number, toIndex: number) => void
+  onMoveProduct: (fromCollection: number, fromIndex: number, toCollection: number, toIndex: number) => void
 }
 
 // Wrapper that makes a product card sortable via dnd-kit
@@ -311,7 +312,7 @@ function SortableProductCard({
   )
 }
 
-export function ProductCollections({ collections, onRemoveProduct, onRemoveSelected, onReorder }: ProductCollectionsProps) {
+export function ProductCollections({ collections, onRemoveProduct, onRemoveSelected, onReorder, onMoveProduct }: ProductCollectionsProps) {
   const [activeTab, setActiveTab] = useState(-1)  // -1 = "All" tab
   const [selected, setSelected] = useState<Map<number, Set<number>>>(new Map())
   const [activeSellers, setActiveSellers] = useState<Set<Seller>>(new Set(SELLERS))
@@ -492,10 +493,18 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
 
-  const canReorder = activeTab >= 0 // disabled on "All" tab
+  // Helper: find which source collection a product belongs to and its real index
+  const findSourceProduct = useCallback((product: CollectionProduct): { ci: number; pi: number } | null => {
+    if (!collections) return null
+    for (let ci = 0; ci < collections.length; ci++) {
+      const pi = collections[ci].products.indexOf(product)
+      if (pi !== -1) return { ci, pi }
+    }
+    return null
+  }, [collections])
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
-    if (!canReorder || !collections || !activeCollection) return
+    if (!collections || !activeCollection) return
     const { active, over } = event
     if (!over || active.id === over.id) return
 
@@ -504,17 +513,32 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
     const toFiltered = filteredProducts.findIndex((_, i) => `product-${i}` === over.id)
     if (fromFiltered === -1 || toFiltered === -1) return
 
-    // Map filtered indices back to real indices in the source collection
     const fromProduct = filteredProducts[fromFiltered]
     const toProduct = filteredProducts[toFiltered]
-    const realFrom = collections[activeTab].products.indexOf(fromProduct)
-    const realTo = collections[activeTab].products.indexOf(toProduct)
-    if (realFrom === -1 || realTo === -1) return
 
-    onReorder(activeTab, realFrom, realTo)
-    // Clear selections since indices shift
+    if (activeTab === -1) {
+      // "All" tab: trace both products to source collections
+      const from = findSourceProduct(fromProduct)
+      const to = findSourceProduct(toProduct)
+      if (!from || !to) return
+
+      if (from.ci === to.ci) {
+        // Same collection — simple reorder
+        onReorder(from.ci, from.pi, to.pi)
+      } else {
+        // Different collections — move product
+        onMoveProduct(from.ci, from.pi, to.ci, to.pi)
+      }
+    } else {
+      // Specific collection tab
+      const realFrom = collections[activeTab].products.indexOf(fromProduct)
+      const realTo = collections[activeTab].products.indexOf(toProduct)
+      if (realFrom === -1 || realTo === -1) return
+      onReorder(activeTab, realFrom, realTo)
+    }
+
     setSelected(prev => { const next = new Map(prev); next.delete(activeTab); return next })
-  }, [canReorder, collections, activeCollection, activeTab, onReorder])
+  }, [collections, activeCollection, activeTab, findSourceProduct, onReorder, onMoveProduct])
 
   if (!isLoading && collections.length === 0) return null
 
@@ -644,7 +668,7 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
         <SortableContext
           items={activeCollection ? activeCollection.products.map((_, i) => `product-${i}`) : []}
           strategy={rectSortingStrategy}
-          disabled={!canReorder}
+          disabled={false}
         >
           <div
             id="ProductCollections-grid"
@@ -654,7 +678,7 @@ export function ProductCollections({ collections, onRemoveProduct, onRemoveSelec
               Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
             ) : activeCollection ? (
               activeCollection.products.map((p, i) => (
-                <SortableProductCard key={`${activeTab}-${p.dataId ?? i}`} id={`product-${i}`} disabled={!canReorder}>
+                <SortableProductCard key={`${activeTab}-${p.dataId ?? i}`} id={`product-${i}`} disabled={false}>
                   {useKosmos ? (
                     <KmartProductCard
                       p={p}
