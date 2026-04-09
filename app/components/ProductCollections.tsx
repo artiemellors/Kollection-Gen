@@ -61,11 +61,13 @@ function KmartProductCard({
   animDelay,
   isSelected,
   onToggleSelect,
+  onRemove,
 }: {
   p: CollectionProduct
   animDelay: number
   isSelected: boolean
   onToggleSelect: () => void
+  onRemove: () => void
 }) {
   const hasAlt = !!p.altImageUrl
   const [showAlt, setShowAlt] = useState(false)
@@ -102,6 +104,17 @@ function KmartProductCard({
           <i className="fa-solid fa-check text-white text-[11px]" />
         )}
       </div>
+
+      {/* Remove button */}
+      <button
+        className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-white/80 border border-black/10
+                   flex items-center justify-center opacity-0 group-hover:opacity-100
+                   transition-all duration-150 hover:bg-red-50 hover:border-red-200 hover:text-red-500"
+        style={{ backdropFilter: 'blur(4px)' }}
+        onClick={e => { e.stopPropagation(); onRemove() }}
+      >
+        <i className="fa-solid fa-xmark text-[10px] text-[rgba(26,26,26,0.4)]" />
+      </button>
 
       <div className="relative bg-[#F4F5F6] overflow-hidden rounded-[8px]">
         <div className="aspect-[4/5] w-full relative">
@@ -164,16 +177,18 @@ function OriginalProductCard({
   animDelay,
   isSelected,
   onToggleSelect,
+  onRemove,
 }: {
   p: CollectionProduct
   animDelay: number
   isSelected: boolean
   onToggleSelect: () => void
+  onRemove: () => void
 }) {
   return (
     <div
       onClick={onToggleSelect}
-      className={`bg-white rounded-lg overflow-hidden flex flex-col transition-all duration-150 cursor-pointer ${
+      className={`bg-white rounded-lg overflow-hidden flex flex-col transition-all duration-150 cursor-pointer relative group ${
         isSelected ? 'ring-2 ring-[var(--accent)] ring-offset-4' : ''
       }`}
       style={{ animation: `fadeUp 300ms ${animDelay}ms ease both` }}
@@ -191,6 +206,16 @@ function OriginalProductCard({
           <i className="fa-solid fa-check text-white text-[11px]" />
         )}
       </div>
+
+      {/* Remove button */}
+      <button
+        className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-white/80 border border-black/10
+                   flex items-center justify-center opacity-0 group-hover:opacity-100
+                   transition-all duration-150 hover:bg-red-50 hover:border-red-200 hover:text-red-500"
+        onClick={e => { e.stopPropagation(); onRemove() }}
+      >
+        <i className="fa-solid fa-xmark text-[10px] text-[rgba(26,26,26,0.4)]" />
+      </button>
 
       <div className="relative bg-white rounded-lg">
         {p.imageUrl ? (
@@ -232,7 +257,13 @@ function OriginalProductCard({
   )
 }
 
-export function ProductCollections({ collections }: { collections: ProductCollection[] | null }) {
+interface ProductCollectionsProps {
+  collections: ProductCollection[] | null
+  onRemoveProduct: (collectionIndex: number, productIndex: number) => void
+  onRemoveSelected: (collectionIndex: number, productIndices: Set<number>) => void
+}
+
+export function ProductCollections({ collections, onRemoveProduct, onRemoveSelected }: ProductCollectionsProps) {
   const [activeTab, setActiveTab] = useState(-1)  // -1 = "All" tab
   const [selected, setSelected] = useState<Map<number, Set<number>>>(new Map())
   const [activeSellers, setActiveSellers] = useState<Set<Seller>>(new Set(SELLERS))
@@ -254,23 +285,22 @@ export function ProductCollections({ collections }: { collections: ProductCollec
     setActiveSellers(prev => {
       const next = new Set(prev)
       if (next.has(seller)) {
-        if (next.size > 1) next.delete(seller) // don't allow deselecting all
+        if (next.size > 1) next.delete(seller)
       } else {
         next.add(seller)
       }
       return next
     })
-    // Reset selection when filters change
     setSelected(new Map())
   }, [])
 
   // Filter products by active sellers
   const filterBySeller = useCallback((products: CollectionProduct[]) => {
-    if (activeSellers.size === SELLERS.length) return products // all selected, skip filter
+    if (activeSellers.size === SELLERS.length) return products
     return products.filter(p => !p.seller || activeSellers.has(p.seller as Seller))
   }, [activeSellers])
 
-  // Compute the "All" virtual collection
+  // Compute the "All" virtual collection (before seller filtering)
   const allCollection: ProductCollection | null = isLoading ? null : {
     name: 'All',
     products: collections.flatMap(col => col.products),
@@ -311,6 +341,81 @@ export function ProductCollections({ collections }: { collections: ProductCollec
       return next
     })
   }, [activeTab])
+
+  // Remove a single product — resolve "All" tab index to source collection
+  const handleRemove = useCallback((displayIndex: number) => {
+    if (!collections || !activeCollection) return
+    if (activeTab === -1) {
+      // "All" tab: trace back to the source collection
+      const filteredProducts = activeCollection.products
+      const product = filteredProducts[displayIndex]
+      if (!product) return
+      let offset = 0
+      for (let ci = 0; ci < collections.length; ci++) {
+        const colProducts = filterBySeller(collections[ci].products)
+        const localIndex = colProducts.indexOf(product)
+        if (localIndex !== -1) {
+          // Find the real index in the unfiltered collection
+          const realIndex = collections[ci].products.indexOf(product)
+          if (realIndex !== -1) {
+            onRemoveProduct(ci, realIndex)
+            // Clear selection for All tab since indices shift
+            setSelected(prev => { const next = new Map(prev); next.delete(-1); return next })
+            return
+          }
+        }
+        offset += colProducts.length
+      }
+    } else {
+      // Specific collection tab: map filtered index back to real index
+      const filteredProducts = activeCollection.products
+      const product = filteredProducts[displayIndex]
+      if (!product) return
+      const realIndex = collections[activeTab].products.indexOf(product)
+      if (realIndex !== -1) {
+        onRemoveProduct(activeTab, realIndex)
+        setSelected(prev => { const next = new Map(prev); next.delete(activeTab); return next })
+      }
+    }
+  }, [collections, activeCollection, activeTab, filterBySeller, onRemoveProduct])
+
+  // Remove selected products
+  const handleRemoveSelectedProducts = useCallback(() => {
+    if (!collections || !activeCollection || selectedCount === 0) return
+    const filteredProducts = activeCollection.products
+
+    if (activeTab === -1) {
+      // "All" tab: group selected products by their source collection
+      const removals = new Map<number, Set<number>>()
+      for (const displayIndex of activeSelected) {
+        const product = filteredProducts[displayIndex]
+        if (!product) continue
+        for (let ci = 0; ci < collections.length; ci++) {
+          const realIndex = collections[ci].products.indexOf(product)
+          if (realIndex !== -1) {
+            if (!removals.has(ci)) removals.set(ci, new Set())
+            removals.get(ci)!.add(realIndex)
+            break
+          }
+        }
+      }
+      // Remove from each collection (process in reverse order so indices don't shift)
+      for (const [ci, indices] of removals) {
+        onRemoveSelected(ci, indices)
+      }
+    } else {
+      // Specific collection: map filtered indices to real indices
+      const realIndices = new Set<number>()
+      for (const displayIndex of activeSelected) {
+        const product = filteredProducts[displayIndex]
+        if (!product) continue
+        const realIndex = collections[activeTab].products.indexOf(product)
+        if (realIndex !== -1) realIndices.add(realIndex)
+      }
+      onRemoveSelected(activeTab, realIndices)
+    }
+    setSelected(prev => { const next = new Map(prev); next.delete(activeTab); return next })
+  }, [collections, activeCollection, activeTab, activeSelected, selectedCount, filterBySeller, onRemoveSelected])
 
   const handleExportAll = useCallback(() => {
     if (!activeCollection) return
@@ -355,6 +460,17 @@ export function ProductCollections({ collections }: { collections: ProductCollec
             >
               {selectedCount === activeCollection.products.length ? 'Deselect All' : 'Select All'}
             </button>
+            {selectedCount > 0 && (
+              <button
+                onClick={handleRemoveSelectedProducts}
+                className="text-[11px] font-semibold tracking-[0.12em] uppercase
+                           transition-all flex items-center gap-1.5
+                           text-red-400 hover:text-red-600"
+              >
+                <i className="fa-solid fa-trash-can text-[10px]" />
+                Remove ({selectedCount})
+              </button>
+            )}
             {selectedCount > 0 && (
               <button
                 onClick={handleExportSelected}
@@ -456,19 +572,21 @@ export function ProductCollections({ collections }: { collections: ProductCollec
           activeCollection.products.map((p, i) => (
             useKosmos ? (
               <KmartProductCard
-                key={`${activeTab}-${i}`}
+                key={`${activeTab}-${p.dataId ?? i}`}
                 p={p}
                 animDelay={i * 35}
                 isSelected={activeSelected.has(i)}
                 onToggleSelect={() => toggleSelect(i)}
+                onRemove={() => handleRemove(i)}
               />
             ) : (
               <OriginalProductCard
-                key={`${activeTab}-${i}`}
+                key={`${activeTab}-${p.dataId ?? i}`}
                 p={p}
                 animDelay={i * 35}
                 isSelected={activeSelected.has(i)}
                 onToggleSelect={() => toggleSelect(i)}
+                onRemove={() => handleRemove(i)}
               />
             )
           ))

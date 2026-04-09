@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useEffect, useRef } from 'react'
+import { use, useState, useEffect, useRef, useCallback } from 'react'
 import { ProductCollections, type ProductCollection } from '../components/ProductCollections'
 import RefinementChips from '../components/RefinementChips'
 import Image from 'next/image'
@@ -239,6 +239,28 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
     e.preventDefault()
     runSearch(query)
   }
+
+  // ─── Collection mutation handlers ─────────────────────────────────────────
+
+  const handleRemoveProduct = useCallback((collectionIndex: number, productIndex: number) => {
+    setCollections(prev => {
+      if (!prev) return prev
+      return prev.map((col, ci) => {
+        if (ci !== collectionIndex) return col
+        return { ...col, products: col.products.filter((_, pi) => pi !== productIndex) }
+      }).filter(col => col.products.length > 0)
+    })
+  }, [])
+
+  const handleRemoveSelected = useCallback((collectionIndex: number, productIndices: Set<number>) => {
+    setCollections(prev => {
+      if (!prev) return prev
+      return prev.map((col, ci) => {
+        if (ci !== collectionIndex) return col
+        return { ...col, products: col.products.filter((_, pi) => !productIndices.has(pi)) }
+      }).filter(col => col.products.length > 0)
+    })
+  }, [])
 
   const hasResults = collections !== null && collections.length > 0
 
@@ -487,7 +509,13 @@ export default function CategoryPage({ params }: { params: Promise<{ category: s
           onRefine={chip => runSearch(`${query} — ${chip}`)}
         />
       )}
-      {(hasResults || loading) && <ProductCollections collections={collections} />}
+      {(hasResults || loading) && (
+        <ProductCollections
+          collections={collections}
+          onRemoveProduct={handleRemoveProduct}
+          onRemoveSelected={handleRemoveSelected}
+        />
+      )}
     </div>
   )
 }
